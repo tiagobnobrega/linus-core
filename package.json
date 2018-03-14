@@ -4,12 +4,27 @@
   "description": "Lean Intelligent Understanding System",
   "main": "index.js",
   "scripts": {
+    "precommit": "lint-staged",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "chatbot",
-    "linus"
-  ],
+  "lint-staged": {
+    "*.{js,json,css,md}": [
+      "prettier --single-quote --trailing-comma es5 --write",
+      "git add"
+    ]
+  },
+  "keywords": ["chatbot", "linus"],
   "author": "Tiago Nobrega",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "babel-eslint": "8",
+    "eslint": "4.x",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-config-prettier": "^2.9.0",
+    "eslint-plugin-import": "^2.9.0",
+    "eslint-plugin-prettier": "^2.6.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.0.0",
+    "prettier": "^1.11.1"
+  }
 }

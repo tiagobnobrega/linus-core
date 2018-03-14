@@ -8,10 +8,18 @@
     "require": false
   },
 
-  "extends": "airbnb-base",
+  "extends": ["prettier","airbnb-base"],
+  "plugins": ["prettier"],
   "parser": "babel-eslint",
   "rules":{
-    "class-methods-use-this":0
+    "class-methods-use-this":0,
 //    "eslint no-underscore-dangle": 0 globally disable "_" properties
+    "prettier/prettier": [
+      "error",
+      {
+        "singleQuote": true,
+        "trailingComma": "es5"
+      }
+    ]
   }
 }
