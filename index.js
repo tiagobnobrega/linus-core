@@ -1,11 +1,11 @@
-const pjson = require("./package.json");
+const pjson = require('./package.json');
 
 const { version } = pjson;
 const b = {
-  a: "b"
+  a: 'b',
 };
 
-console.log("b", b);
+console.log('b', b);
 module.exports = {
-  version
+  version,
 };
