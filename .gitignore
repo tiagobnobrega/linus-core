@@ -1,0 +1,5 @@
+node_modules/
+.env
+.ebextensions/
+.vscode/
+lais-bot.rar
