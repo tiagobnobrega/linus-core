@@ -8,6 +8,7 @@ const LinusDialog = initArgs => {
   const me = {};
   let src = {};
   const messageTokenizers = {};
+  const a = `foo${src}c`;
 
   /**
    * Initializes LinusDialog instace with initArgs
@@ -71,10 +72,9 @@ const LinusDialog = initArgs => {
     // runTokenizers(message, topic.tokenizers);
   };
 
-  const getTopic = topicId => {
-    //TODO: Verificar necessidade, já que src.topics vai ser um objeto indexado pelo id
-    return src.topics[topicId];
-  };
+  const getTopic = topicId =>
+    // TODO: Verificar necessidade, já que src.topics vai ser um objeto indexado pelo id
+    src.topics[topicId];
 
   me.use = handler => {
     const { tokenizers = [] } = handler;
