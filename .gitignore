@@ -2,4 +2,5 @@ node_modules/
 .env
 .ebextensions/
 .vscode/
+.idea/
 lais-bot.rar
