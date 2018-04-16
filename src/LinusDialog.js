@@ -14,15 +14,17 @@ const LinusDialog = initArgs => {
    */
   const init = () => {
     // perform initialization based on initArgs;
-    // TODO: Transformar array topics e interactions em objeto
-    // TODO: Objeto de interactions pode usar como chave <ID_TOPICO>:<ID_INTERACAO>
     const {
       bot = requiredParam('bot'),
       topics = [],
       interactions = [],
     } = initArgs;
 
-    src = { bot, topics, interactions };
+    src = {
+      bot,
+      topics: _.keyBy(topics, 'id'),
+      interactions: _.keyBy(interactions, i => `${i.topicId}:${i.id}`),
+    };
   };
 
   /**
@@ -94,7 +96,6 @@ const LinusDialog = initArgs => {
    * @return tokens - Identified tokens
    */
   const getTopicTokenizers = topic => {
-    // TODO: Check if flag useGlobaltokenizers is set to true and build tokenizers chain
     const globalTokenizers = getTokenizers(src.bot.globalTokenizers);
     const beforeGlobalTokenizers = getTokenizers(
       topic.beforeGlobaltokenizers || []
