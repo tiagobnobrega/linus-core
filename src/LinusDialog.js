@@ -3,12 +3,11 @@ const _ = require('lodash');
 
 const requiredParam = require('./utils/requiredParam');
 
-// const CTX_ATTR = '_linus';
+const CTX_ATTR = 'env';
 const LinusDialog = initArgs => {
   const me = {};
   let src = {};
   const messageTokenizers = {};
-  const a = `foo${src}c`;
 
   /**
    * Initializes LinusDialog instace with initArgs
@@ -35,8 +34,8 @@ const LinusDialog = initArgs => {
     if (
       !tokenizer ||
       !tokenizer.id ||
-      !tokenizer.fn ||
-      !_.isFunction(tokenizer.fn)
+      !tokenizer.tokenize ||
+      !_.isFunction(tokenizer.tokenize)
     )
       throw new Error(
         `invalid tokenizer ${tokenizer &&
@@ -49,7 +48,7 @@ const LinusDialog = initArgs => {
         } already registered & overwrite attribute false`
       );
     }
-    messageTokenizers[tokenizer.id] = tokenizer.fn;
+    messageTokenizers[tokenizer.id] = tokenizer.tokenize;
   };
 
   /**
@@ -57,8 +56,36 @@ const LinusDialog = initArgs => {
    * @param message
    * @param tokenizers
    */
-  const runTokenizers = (message, tokenizers) => {
-    // TODO run tokenizers with Promise.resolve and chain them to get the result????? Pensar em como vai ser isso!!!!
+  const runTokenizers = async (message, tokenizers) => {
+    const promises = tokenizers.map(tokenizer =>
+      Promise.resolve(tokenizer.tokenize(message))
+    );
+
+    // each value must be an object or it should be ignored
+    // should reduce to a single object merging properties
+    //                                values.reduce((a, b) => _.merge(a, b), {}) ///pode funcionar assim também
+    return Promise.all(promises).then(values => Object.assign(...values));
+  };
+
+  /**
+   * Retrieve single tokenizer from id
+   * @param tokenizerId
+   * @return {*}
+   */
+  const getTokenizer = tokenizerId => {
+    const tokenizer = messageTokenizers[tokenizerId];
+    if (!tokenizer) throw new Error(`Tokenizer ${tokenizerId} not registered.`);
+    return tokenizer;
+  };
+
+  /**
+   * Get tokenizers from array of id
+   * @param tokenizersIds
+   * @return {*}
+   */
+  const getTokenizers = tokenizersIds => {
+    if (!tokenizersIds) return [];
+    return tokenizersIds.map(getTokenizer);
   };
 
   /**
@@ -66,12 +93,27 @@ const LinusDialog = initArgs => {
    * @param topic - Dialog topic
    * @return tokens - Identified tokens
    */
-  const getTokenizers = topic => {
+  const getTopicTokenizers = topic => {
     // TODO: Check if flag useGlobaltokenizers is set to true and build tokenizers chain
-    // return topic.tokenizers;
-    // runTokenizers(message, topic.tokenizers);
+    const globalTokenizers = getTokenizers(src.bot.globalTokenizers);
+    const beforeGlobalTokenizers = getTokenizers(
+      topic.beforeGlobaltokenizers || []
+    );
+    const afterGlobalTokenizers = getTokenizers(
+      topic.afterGlobaltokenizers || []
+    );
+    return [
+      ...beforeGlobalTokenizers,
+      ...globalTokenizers,
+      ...afterGlobalTokenizers,
+    ];
   };
 
+  /**
+   * Get topic by id
+   * @param topicId
+   * @return {*}
+   */
   const getTopic = topicId =>
     // TODO: Verificar necessidade, já que src.topics vai ser um objeto indexado pelo id
     src.topics[topicId];
@@ -81,12 +123,12 @@ const LinusDialog = initArgs => {
     tokenizers.forEach(registerTokenizer);
   };
 
-  me.resolve = (message, ctx) => {
+  me.resolve = async (message, ctx) => {
     // get topic from context
-    const topic = getTopic(ctx.currTopicId); // TODO: Definir estrutura de objeto de contexto
-    const topicTokenizers = getTokenizers(topic);
-    const messageTokens = runTokenizers(message, topicTokenizers);
-    return messageTokens.continuar;
+    const topic = getTopic(ctx[CTX_ATTR].topicId) || src.bot.rootTopic;
+    const topicTokenizers = getTopicTokenizers(topic);
+    const messageTokens = await runTokenizers(message, topicTokenizers);
+    // TODO: @@@@@@@@@@@@@@@@@@@@ CONTINUAR @@@@@@@@@@@@@@@@@@@@@@@@@@
   };
 
   init();
