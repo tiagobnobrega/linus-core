@@ -1,7 +1,7 @@
 const util = require('util');
 const _ = require('lodash');
 const moment = require('moment');
-const { get, add, clear, clearAll } = require('./util/rules-function-utils'); //TODO Remover funções e avaliar impacto
+const { get, add, clear, clearAll } = require('./util/rules-function-utils'); // TODO Remover funções e avaliar impacto
 const RTCompiler = require('./util/RTCompiler')({
   get,
   add,
@@ -24,7 +24,7 @@ class RuleFunctionCompiler {
         RTCompiler.compileAttributes(
           action,
           'match',
-          'setContext' /*,"goToDialog"*/
+          'setContext' /* ,"goToDialog" */
         );
 
         action.replies

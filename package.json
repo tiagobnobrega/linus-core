@@ -9,7 +9,10 @@
     "lint": "npm run lint:js && npm run lint:pretty",
     "lint:pretty":
       "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
-    "lint:js": "npx eslint --fix ./src/*.js"
+    "lint:js": "npx eslint --fix ./src/*.js",
+    "build": "npm run build:split && npm run build:unified",
+    "build:split": "webpack",
+    "build:unified": "webpack --config webpack.unified.config"
   },
   "lint-staged": {
     "*.{js}": [
@@ -26,7 +29,11 @@
   "author": "Tiago Nobrega",
   "license": "ISC",
   "devDependencies": {
+    "babel-core": "^6.26.0",
     "babel-eslint": "8",
+    "babel-loader": "^7.1.4",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-preset-env": "^1.6.1",
     "eslint": "4.x",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-config-prettier": "^2.9.0",
@@ -34,7 +41,9 @@
     "eslint-plugin-prettier": "^2.6.0",
     "husky": "^0.14.3",
     "lint-staged": "^7.0.0",
-    "prettier": "^1.11.1"
+    "prettier": "^1.11.1",
+    "webpack": "^4.6.0",
+    "webpack-cli": "^2.0.14"
   },
   "dependencies": {
     "debug": "^3.1.0",

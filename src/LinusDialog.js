@@ -1,11 +1,12 @@
 // const log = require('debug')('linus:linusDialog');
 const _ = require('lodash');
 
+
 const requiredParam = require('./utils/requiredParam');
 
 const CTX_ATTR = 'env';
 const LinusDialog = initArgs => {
-  const me = {};
+  // const me = this;
   let src = {};
   const messageTokenizers = {};
 
@@ -14,10 +15,13 @@ const LinusDialog = initArgs => {
    */
   const init = () => {
     // perform initialization based on initArgs;
+    // TODO: register tokenizer of tokenizers params
     const {
       bot = requiredParam('bot'),
       topics = [],
       interactions = [],
+      handlers = [],
+      tokenizers = [],
     } = initArgs;
 
     src = {
@@ -25,6 +29,8 @@ const LinusDialog = initArgs => {
       topics: _.keyBy(topics, 'id'),
       interactions: _.keyBy(interactions, i => `${i.topicId}:${i.id}`),
     };
+
+    handlers.forEach(this.use);
   };
 
   /**
@@ -55,12 +61,12 @@ const LinusDialog = initArgs => {
 
   /**
    * Run tokenizers chain in sequence and return message tokens
-   * @param message
-   * @param tokenizers
+   * @param message - String. message to be tokenized
+   * @param tokenizers - Array<Object>. Tokenizers objects
    */
   const runTokenizers = async (message, tokenizers) => {
-    const promises = tokenizers.map(tokenizer =>
-      Promise.resolve(tokenizer.tokenize(message))
+    const promises = tokenizers.map(
+      tokenizer => Promise.resolve(tokenizer.tokenize(message)) // TODO: place catch to identify tokenizer error
     );
 
     // each value must be an object or it should be ignored
@@ -71,8 +77,8 @@ const LinusDialog = initArgs => {
 
   /**
    * Retrieve single tokenizer from id
-   * @param tokenizerId
-   * @return {*}
+   * @param tokenizerId - String. Tokenizer id
+   * @return {*} - Object.Tokenizer w/ id
    */
   const getTokenizer = tokenizerId => {
     const tokenizer = messageTokenizers[tokenizerId];
@@ -82,7 +88,7 @@ const LinusDialog = initArgs => {
 
   /**
    * Get tokenizers from array of id
-   * @param tokenizersIds
+   * @param tokenizersIds Array<String>. Tokenizers Ids.
    * @return {*}
    */
   const getTokenizers = tokenizersIds => {
@@ -112,19 +118,33 @@ const LinusDialog = initArgs => {
 
   /**
    * Get topic by id
-   * @param topicId
-   * @return {*}
+   * @param topicId - String. Topic Id
+   * @return {*} - Object. Topic
    */
   const getTopic = topicId =>
     // TODO: Verificar necessidade, já que src.topics vai ser um objeto indexado pelo id
     src.topics[topicId];
 
-  me.use = handler => {
+  this.use = handler => {
     const { tokenizers = [] } = handler;
+    this.registerTokenizers(tokenizers);
+  };
+
+  /**
+   * Register tokenizers on dialog instance
+   * @param tokenizers - Array<Object>. Tokenizers to register
+   */
+  this.registerTokenizers = tokenizers => {
     tokenizers.forEach(registerTokenizer);
   };
 
-  me.resolve = async (message, ctx) => {
+  /**
+   * Exposes register token internal function
+   * @param tokenizer - Object. Tokenizer to register.
+   */
+  this.registerTokenizer = tokenizer => registerTokenizer(tokenizer);
+
+  this.resolve = async (message, ctx) => {
     // get topic from context
     const topic = getTopic(ctx[CTX_ATTR].topicId) || src.bot.rootTopic;
     const topicTokenizers = getTopicTokenizers(topic);
@@ -133,7 +153,7 @@ const LinusDialog = initArgs => {
   };
 
   init();
-  return me;
+  return this;
 };
 
 module.exports = LinusDialog;
