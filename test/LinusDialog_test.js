@@ -5,5 +5,3 @@ const _ = require('lodash');
 const testData = require('./testdata');
 
 const linus = LinusDialog({ ...testData });
-
-linus.registe
