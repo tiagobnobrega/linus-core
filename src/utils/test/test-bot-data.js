@@ -3,7 +3,7 @@
 module.exports = {
   bot: {
     id: 'test-bot',
-    globalTokenizers: ['aiTokenizer'],
+    globalTokenizers: ['globalTokenizer'],
     description: 'Test bot',
     rootTopic: 'ROOT',
   },
@@ -12,8 +12,8 @@ module.exports = {
       id: 'ROOT',
       botId: 'test-bot',
       useGlobalTokenizers: true,
-      beforeGlobaltokenizers: [],
-      afterGlobaltokenizers: [],
+      beforeGlobaltokenizers: ['rootBeforeGlobalTokenizer'],
+      afterGlobaltokenizers: ['rootAfterGlobalTokenizer'],
       ignoreTokens: null,
       onEnter: null,
     },

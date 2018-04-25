@@ -54,6 +54,14 @@ export default class LinusDialogBase {
   };
 
   /**
+   * Register tokenizers on dialog instance
+   * @param {[Object<Tokenizers>]} tokenizers - Tokenizers to register
+   */
+  registerTokenizers = tokenizers => {
+    tokenizers.forEach(this.registerTokenizer);
+  };
+
+  /**
    * Run tokenizers chain in sequence and return message tokens
    * @param {String} message - Message to be tokenized
    * @param {[Object]} tokenizers - Tokenizers objects
@@ -96,7 +104,10 @@ export default class LinusDialogBase {
    * @return {[Object<Tokens>]} tokens - Identified tokens
    */
   getTopicTokenizers = topic => {
-    const globalTokenizers = this.getTokenizers(this.src.bot.globalTokenizers);
+    const globalTokenizers =
+      topic.useGlobalTokenizers === false
+        ? []
+        : this.getTokenizers(this.src.bot.globalTokenizers);
     const beforeGlobalTokenizers = this.getTokenizers(
       topic.beforeGlobaltokenizers || []
     );
@@ -118,14 +129,6 @@ export default class LinusDialogBase {
   getTopic = topicId =>
     // TODO: Verificar necessidade, já que src.topics vai ser um objeto indexado pelo id
     this.src.topics[topicId];
-
-  /**
-   * Register tokenizers on dialog instance
-   * @param {[Object<Tokenizers>]} tokenizers - Tokenizers to register
-   */
-  registerTokenizers = tokenizers => {
-    tokenizers.forEach(this.registerTokenizer);
-  };
 
   /**
    * Use passed handler.

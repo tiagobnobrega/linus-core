@@ -1,8 +1,18 @@
 {
   "presets": [
-    "env"
+    ["env",
+      {
+        "targets": {
+          "browsers": [
+            "last 2 versions"
+          ],
+          "node": "7.0.0"
+        }
+      }
+    ]
   ],
   "plugins": [
-    "add-module-exports"
+    "add-module-exports",
+    "transform-class-properties"
   ]
 }
