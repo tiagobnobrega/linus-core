@@ -1,5 +1,5 @@
 Arguments: 
-  /home/tiago/.nvm/versions/node/v9.10.1/bin/node /home/tiago/.nvm/versions/node/v9.10.1/bin/yarn test
+  /home/tiago/.nvm/versions/node/v9.10.1/bin/node /home/tiago/.nvm/versions/node/v9.10.1/bin/yarn test:coverage
 
 PATH: 
   /home/tiago/.nvm/versions/node/v9.10.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/lib/jvm/java-9-oracle/bin:/usr/lib/jvm/java-9-oracle/db/bin
@@ -24,7 +24,8 @@ npm manifest:
       "test": "jest",
       "test:coverage": "jest --coverage",
       "lint": "npm run lint:js && npm run lint:pretty",
-      "lint:pretty": "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
+      "lint:pretty":
+        "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
       "lint:js": "npx eslint --fix ./src/*.js",
       "build": "npm run build:split && npm run build:unified",
       "build:split": "webpack",
@@ -41,10 +42,7 @@ npm manifest:
         "git add"
       ]
     },
-    "keywords": [
-      "chatbot",
-      "linus"
-    ],
+    "keywords": ["chatbot", "linus"],
     "author": "Tiago Nobrega",
     "license": "ISC",
     "devDependencies": {
@@ -6675,7 +6673,7 @@ Trace:
   Error: Command failed.
   Exit code: 1
   Command: sh
-  Arguments: -c jest
+  Arguments: -c jest --coverage
   Directory: /media/storage/ws/js/linus/linus-core
   Output:
   

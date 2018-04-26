@@ -2,7 +2,6 @@ import LinusDialogBase from './LinusDialogBase';
 import botTestData from './utils/test/test-bot-data';
 
 import { validTokenizer, testTokenizer } from './utils/test/tokenizers';
-import { wait } from './utils/test/helpers';
 
 // globals:
 let linus = new LinusDialogBase(botTestData);
@@ -32,6 +31,12 @@ describe('LinusDialogBase', () => {
       expect(() => linus.registerTokenizer(cloneTokenizer)).toThrow();
     });
 
+    test('Tokenizer w tokenize function NOT a function should throw Error', () => {
+      const cloneTokenizer = validTokenizer();
+      cloneTokenizer.tokenize = 'NOT A FUNCTION';
+      expect(() => linus.registerTokenizer(cloneTokenizer)).toThrow();
+    });
+
     test('Register 2 tokenizers w/ same id should throw if NOT overriding', () => {
       const tokenizer1 = validTokenizer('SameId');
       const tokenizer2 = validTokenizer('SameId');
@@ -54,6 +59,12 @@ describe('LinusDialogBase', () => {
       linus.registerTokenizer(validTokenizer('tokenizerId'));
       const foundTokenizer = linus.getTokenizer('tokenizerId');
       expect(foundTokenizer).toBeDefined();
+    });
+
+    test('getTokenizers should return empty array when called w/o id', () => {
+      linus.registerTokenizer(validTokenizer('tokenizerId'));
+      const foundTokenizer = linus.getTokenizers();
+      expect(foundTokenizer.length).toBe(0);
     });
 
     test('Registered tokenizers w/ array should be accessible by id', () => {
@@ -103,33 +114,6 @@ describe('LinusDialogBase', () => {
 
       expect(timediff).toBeLessThan(200);
     });
-
-    // TODO: Tokenizer rodam ao mesmo tempo de forma async. Criar outra forma de alterar o contexto depois do tokenizers executarem
-    // test('Passed tokenizers should be runned in order by runTokenizers', async () => {
-    //   const tokenizers = [
-    //     testTokenizer('tokenizer1'),
-    //     testTokenizer('tokenizer2'),
-    //     testTokenizer('tokenizer3'),
-    //   ];
-    //   const baseTime = new Date().getTime();
-    //   await wait(100);
-    //   const messageTokenizers = await linus.runTokenizers(
-    //     'test output',
-    //     tokenizers
-    //   );
-    //
-    //   expect(messageTokenizers.tokenizer1_timestamp).toBeGreaterThan(baseTime);
-    //   expect(messageTokenizers.tokenizer2_timestamp).toBeGreaterThan(
-    //     messageTokenizers.tokenizer1_timestamp
-    //   );
-    //   expect(messageTokenizers.tokenizer2_timestamp).toBeLessThan(
-    //     messageTokenizers.tokenizer3_timestamp
-    //   );
-    // });
-    //
-    // test('Sync tokenizers should be runned in order by runTokenizers and output expected results', () => {
-    //   // TODO Write test
-    // });
   });
 
   describe('LinusDialogBase: Topic Operations', () => {
@@ -139,29 +123,19 @@ describe('LinusDialogBase', () => {
       expect(topic.id).toBe(topicId);
     });
 
-    test('getTopicTokenizers should return global tokenizers if useGlobalTokenizers !== false', () => {
-      registerTestTokenizers(
-        'globalTokenizer',
-        'rootBeforeGlobalTokenizer',
-        'rootAfterGlobalTokenizer'
-      );
-      // TODO ...write test
+    test('getTopicTokenizers should return global tokenizers if useGlobalTokenizers is NOT false', () => {
+      registerTestTokenizers('globalTokenizer', 'rootGlobalTokenizer');
+      const topicId = 'ROOT';
+      const topic = linus.getTopic(topicId);
+      const topicTokenizers = linus.getTopicTokenizers(topic);
+      expect(topicTokenizers.length).toBe(2);
     });
-    test('getTopicTokenizers should NOT return global tokenizers if useGlobalTokenizers === false', () => {
-      registerTestTokenizers(
-        'globalTokenizer',
-        'rootBeforeGlobalTokenizer',
-        'rootAfterGlobalTokenizer'
-      );
-      // TODO ...write test
-    });
-    test('getTopicTokenizers should return tokenizers in the order registered', () => {
-      registerTestTokenizers(
-        'globalTokenizer',
-        'rootBeforeGlobalTokenizer',
-        'rootAfterGlobalTokenizer'
-      );
-      // TODO ...write test
+    test('getTopicTokenizers should NOT return global tokenizers if useGlobalTokenizers is false', () => {
+      registerTestTokenizers('globalTokenizer', 'rootGlobalTokenizer');
+      const topicId = 'LOCAL_TOKENIZER';
+      const topic = linus.getTopic(topicId);
+      const topicTokenizers = linus.getTopicTokenizers(topic);
+      expect(topicTokenizers.length).toBe(1);
     });
   });
 });

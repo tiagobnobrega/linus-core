@@ -108,17 +108,19 @@ export default class LinusDialogBase {
       topic.useGlobalTokenizers === false
         ? []
         : this.getTokenizers(this.src.bot.globalTokenizers);
-    const beforeGlobalTokenizers = this.getTokenizers(
-      topic.beforeGlobaltokenizers || []
-    );
-    const afterGlobalTokenizers = this.getTokenizers(
-      topic.afterGlobaltokenizers || []
-    );
-    return [
-      ...beforeGlobalTokenizers,
-      ...globalTokenizers,
-      ...afterGlobalTokenizers,
-    ];
+    const topicTokenizers = this.getTokenizers(topic.tokenizers || []);
+    return [...globalTokenizers, ...topicTokenizers];
+  };
+
+  /**
+   * Merge tokens into context, keeping internal attributes untouched
+   * @param {Object} context - Context object to be enriched
+   * @param {Object} tokens - Tokens to enrich context
+   * @return {{[p: string]: *}} - Enriched context
+   */
+  enrichContext = (context, tokens) => {
+    const internalAttrs = { ...context.CTX_ATTR };
+    return { ...context, ...tokens, ...{ [CTX_ATTR]: internalAttrs } };
   };
 
   /**
@@ -139,12 +141,25 @@ export default class LinusDialogBase {
     this.registerTokenizers(tokenizers);
   };
 
+  getTopicInteractions = topic => {
+    // TODO: return topic rules
+  };
+
+  getInteractionCandidates = (interactions, context) => {
+    // TODO: retornar interacoes cuja regra de match retorne truthy
+  };
+  getTargetInteraction = (interactions, context) => {
+    // TODO retornar interacao que deve ser executada, levando em conta a prioridade cadastrada
+  };
+
   resolve = async (message, ctx) => {
     // get topic from context
     const topic =
       this.getTopic(ctx[CTX_ATTR].topicId) || this.src.bot.rootTopic;
     const topicTokenizers = this.getTopicTokenizers(topic);
     const messageTokens = await this.runTokenizers(message, topicTokenizers);
+    const enrichedContext = this.enrichContext(ctx, messageTokens);
+
     // TODO: @@@@@@@@@@@@@@@@@@@@ CONTINUAR @@@@@@@@@@@@@@@@@@@@@@@@@@
   };
 }
