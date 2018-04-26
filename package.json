@@ -29,6 +29,9 @@
   "keywords": ["chatbot", "linus"],
   "author": "Tiago Nobrega",
   "license": "ISC",
+  "jest": {
+    "coverageDirectory": "./docs/coverage"
+  },
   "devDependencies": {
     "add": "^2.0.6",
     "babel-core": "^6.26.0",
