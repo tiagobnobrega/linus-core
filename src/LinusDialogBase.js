@@ -1,9 +1,9 @@
 import _ from 'lodash';
 import requiredParam from './utils/requiredParam';
+import RTInterpreter from './utils/RTInterpreter';
 
-const CTX_ATTR = 'env';
+const INTERNAL_ATTR = 'env';
 export default class LinusDialogBase {
-  // const me = this;
   src = {};
   messageTokenizers = {};
 
@@ -13,16 +13,60 @@ export default class LinusDialogBase {
     interactions = [],
     handlers = [],
     tokenizers = [],
+    sandboxScope = {},
   }) {
+    this.interpreter = RTInterpreter(sandboxScope);
+    // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
     this.src = {
       bot,
       topics: _.keyBy(topics, 'id'),
-      interactions: _.keyBy(interactions, i => `${i.topicId}:${i.id}`),
+      interactions: _.keyBy(
+        this.interpretInteractionScritps(interactions),
+        i => `${i.topicId}:${i.id}`
+      ),
     };
 
     handlers.forEach(this.use);
     this.registerTokenizers(tokenizers);
   }
+
+  /**
+   * Interpret string conditions for function & calls interpretActions on interaction actions
+   * @param interactions
+   */
+  interpretInteractionScritps = (interactions = []) => {
+    // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
+    interactions.map(i => ({
+      ...i,
+      condition: this.interpreter.require(i.condition),
+      actions: this.interpretActions(i.actions),
+    }));
+  };
+
+  /**
+   * Interpret string conditions for function & calls interpretSteps on action steps
+   * @param actions
+   * @return {{condition: *|Object|{type, properties, additionalProperties}, steps: {feedback: *}[]}[]}
+   */
+  interpretActions = (actions = []) =>
+    actions.map(a => ({
+      ...a,
+      condition: this.interpreter.require(a.condition),
+      steps: this.interpretSteps(a.steps),
+    }));
+
+  /**
+   * Interpret string feddbacks for function
+   * @param {Object<Step>} steps - steps to be transformed
+   * @return {{feedback: *}[]}
+   */
+  interpretSteps = (steps = []) =>
+    steps.map(s => ({
+      ...s,
+      feedback: _.isString(s.feedback)
+        ? this.interpreter.require(s.feedback)
+        : s.feedback,
+    }));
 
   /**
    * Register tokenizer on instance
@@ -119,8 +163,8 @@ export default class LinusDialogBase {
    * @return {{[p: string]: *}} - Enriched context
    */
   enrichContext = (context, tokens) => {
-    const internalAttrs = { ...context.CTX_ATTR };
-    return { ...context, ...tokens, ...{ [CTX_ATTR]: internalAttrs } };
+    const internalAttrs = { ...context[INTERNAL_ATTR] };
+    return { ...context, ...tokens, ...{ [INTERNAL_ATTR]: internalAttrs } };
   };
 
   /**
@@ -148,17 +192,27 @@ export default class LinusDialogBase {
   getInteractionCandidates = (interactions, context) => {
     // TODO: retornar interacoes cuja regra de match retorne truthy
   };
+
   getTargetInteraction = (interactions, context) => {
     // TODO retornar interacao que deve ser executada, levando em conta a prioridade cadastrada
+  };
+
+  getTopicTargetInteraction = (topic, context) => {
+    const topicInteractions = this.getTopicInteractions(topic);
+    return this.getTargetInteraction(topicInteractions, context);
   };
 
   resolve = async (message, ctx) => {
     // get topic from context
     const topic =
-      this.getTopic(ctx[CTX_ATTR].topicId) || this.src.bot.rootTopic;
+      this.getTopic(ctx[INTERNAL_ATTR].topicId) || this.src.bot.rootTopic;
     const topicTokenizers = this.getTopicTokenizers(topic);
     const messageTokens = await this.runTokenizers(message, topicTokenizers);
     const enrichedContext = this.enrichContext(ctx, messageTokens);
+    const targetItnteraction = this.getTargetInteraction(
+      topic,
+      enrichedContext
+    );
 
     // TODO: @@@@@@@@@@@@@@@@@@@@ CONTINUAR @@@@@@@@@@@@@@@@@@@@@@@@@@
   };

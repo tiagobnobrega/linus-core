@@ -55,6 +55,43 @@ module.exports = {
     },
     {
       botId: 'test-bot',
+      topicId: 'ROOT',
+      id: 'hiFunction',
+      actons: [
+        {
+          condition: 'c=> !!c.intents.hiFunction',
+          steps: [
+            {
+              feedback: `() => ({
+                type: 'REPLY',
+                data: { type: 'text', content: 'Hi, how may I assist You ?' },
+              })`,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      botId: 'test-bot',
+      topicId: 'ROOT',
+      id: 'movie_suggestion',
+      actons: [
+        {
+          condition: 'c=> !!c.intents.movieSuggestion',
+          steps: [
+            {
+              feedback: {
+                type: 'CHANGE_TOPIC',
+                topicId: 'MOVIE_SUGGESTION',
+                runTargetTopicInteractions: true,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      botId: 'test-bot',
       topicId: 'MOVIE_SUGGESTION',
       id: 'incomplete_data',
       condition: 'c=> !c.entities.movie_genre || !c.entities.movie_quality',

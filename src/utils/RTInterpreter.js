@@ -1,26 +1,35 @@
+import extendError from './extendError';
+
 const _ = require('lodash');
 const vm = require('vm');
 
-const RTCompiler = args => {
+class RTInterpreterError extends extendError() {};
+
+const RTInterpreter = (sandboxScope = {}) => {
   const sandbox = vm.createContext(
-    _.merge(args, { module: { exports: null } })
+    _.merge(sandboxScope, { module: { exports: null } })
   );
   const me = {};
 
   me.require = code => {
     if (!(typeof code === 'string')) {
-      throw new Error(`Cannot compile code ${code}. Only strings allowed`);
+      throw new RTInterpreterError(`Cannot compile code ${code}. Only strings allowed`);
     }
     sandbox.module.exports = null;
-    vm.runInNewContext(code, sandbox);
+    try {
+      vm.runInNewContext(code, sandbox);
+    } catch (e) {
+      // throw new RTInterpreterError('Error interpreting source code.', e);
+      throw new RTInterpreterError('Error interpreting source code.');
+    }
     return sandbox.module.exports;
   };
-  me.compileAttributes = (obj, ...attrs) => {
+  me.interpretAttributes = (obj, ...attrs) => {
     attrs.forEach(attr => {
       const attrVal = obj[attr];
       if (!attrVal) return;
       if (!(typeof attr === 'string')) {
-        throw new Error(
+        throw new RTInterpreterError(
           `Cannot compile attribute ${attr}. Only strings allowed`
         );
       }
@@ -32,4 +41,4 @@ const RTCompiler = args => {
   return me;
 };
 
-module.exports = RTCompiler;
+module.exports = RTInterpreter;

@@ -6,6 +6,8 @@ module.exports = {
     LinusDialog: './src/LinusDialog.js',
     tokenizers: './src/tokenizers/index.js',
     handlers: './src/handlers/index.js',
+    RTInterpreter: './src/utils/RTInterpreter.js',
+    extendError: './src/utils/extendError.js',
   },
   output: {
     path: path.resolve(__dirname, './lib'),

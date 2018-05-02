@@ -1,5 +1,5 @@
 Arguments: 
-  /home/tiago/.nvm/versions/node/v9.10.1/bin/node /home/tiago/.nvm/versions/node/v9.10.1/bin/yarn test:coverage
+  /home/tiago/.nvm/versions/node/v9.10.1/bin/node /home/tiago/.nvm/versions/node/v9.10.1/bin/yarn run test
 
 PATH: 
   /home/tiago/.nvm/versions/node/v9.10.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/lib/jvm/java-9-oracle/bin:/usr/lib/jvm/java-9-oracle/db/bin
@@ -45,6 +45,9 @@ npm manifest:
     "keywords": ["chatbot", "linus"],
     "author": "Tiago Nobrega",
     "license": "ISC",
+    "jest": {
+      "coverageDirectory": "./docs/coverage"
+    },
     "devDependencies": {
       "add": "^2.0.6",
       "babel-core": "^6.26.0",
@@ -6673,7 +6676,7 @@ Trace:
   Error: Command failed.
   Exit code: 1
   Command: sh
-  Arguments: -c jest --coverage
+  Arguments: -c jest
   Directory: /media/storage/ws/js/linus/linus-core
   Output:
   

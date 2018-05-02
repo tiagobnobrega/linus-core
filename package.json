@@ -12,7 +12,7 @@
       "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
     "lint:js": "npx eslint --fix ./src/*.js",
     "build": "npm run build:split && npm run build:unified",
-    "build:split": "webpack",
+    "build:split": "webpack --mode development",
     "build:unified": "webpack --config webpack.unified.config"
   },
   "lint-staged": {
@@ -38,7 +38,7 @@
     "babel-eslint": "8",
     "babel-jest": "^22.4.3",
     "babel-loader": "^7.1.4",
-    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-preset-env": "^1.6.1",
     "eslint": "4.x",
     "eslint-config-airbnb-base": "^12.1.0",
@@ -55,6 +55,7 @@
     "yarn": "^1.6.0"
   },
   "dependencies": {
+    "babel-plugin-add-module-exports": "^0.2.1",
     "debug": "^3.1.0",
     "lodash": "^4.17.5",
     "moment": "^2.22.0"

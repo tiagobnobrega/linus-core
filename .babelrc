@@ -6,13 +6,15 @@
           "browsers": [
             "last 2 versions"
           ],
-          "node": "7.0.0"
-        }
+          "node": "8.0.0"
+        },
+        "shippedProposals": true
       }
     ]
   ],
   "plugins": [
     "add-module-exports",
+    "transform-object-rest-spread",
     "transform-class-properties"
   ]
 }
