@@ -1,6 +1,12 @@
 import _ from 'lodash';
 import requiredParam from './utils/requiredParam';
 import RTInterpreter from './utils/RTInterpreter';
+import extendError from './utils/extendError';
+
+export class InvalidCondition extends extendError() {}
+export class ScriptError extends extendError() {}
+export class ConditionScriptError extends extendError(ScriptError) {}
+export class MultipleInteractionsMatched extends extendError() {}
 
 const INTERNAL_ATTR = 'env';
 export default class LinusDialogBase {
@@ -38,7 +44,7 @@ export default class LinusDialogBase {
     // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
     interactions.map(i => ({
       ...i,
-      condition: this.interpreter.require(i.condition),
+      condition: i.condition && this.interpreter.require(i.condition),
       actions: this.interpretActions(i.actions),
     }));
   };
@@ -51,7 +57,7 @@ export default class LinusDialogBase {
   interpretActions = (actions = []) =>
     actions.map(a => ({
       ...a,
-      condition: this.interpreter.require(a.condition),
+      condition: a.condition && this.interpreter.require(a.condition),
       steps: this.interpretSteps(a.steps),
     }));
 
@@ -63,9 +69,10 @@ export default class LinusDialogBase {
   interpretSteps = (steps = []) =>
     steps.map(s => ({
       ...s,
-      feedback: _.isString(s.feedback)
-        ? this.interpreter.require(s.feedback)
-        : s.feedback,
+      feedback:
+        s.feedback && _.isString(s.feedback)
+          ? this.interpreter.require(s.feedback)
+          : s.feedback,
     }));
 
   /**
@@ -185,20 +192,77 @@ export default class LinusDialogBase {
     this.registerTokenizers(tokenizers);
   };
 
-  getTopicInteractions = topic => {
-    // TODO: return topic rules
-  };
+  /**
+   * Get all interactions belonging to topic
+   * @param topicId
+   * @return {*}
+   */
+  getTopicInteractions = topicId => this.src.interactions[topicId];
 
-  getInteractionCandidates = (interactions, context) => {
-    // TODO: retornar interacoes cuja regra de match retorne truthy
-  };
+  /**
+   * Returns all interactions with condition function returns truthy
+   * @param interactions
+   * @param context
+   * @return {*}
+   */
+  getInteractionCandidates = (interactions, context) =>
+    interactions.filter(i => {
+      const { condition, id = 'undefined interaction' } = i;
+      if (!condition || condition === true) return true;
+      if (!_.isFunction(condition))
+        throw new InvalidCondition(
+          `Interaction '${id}' condition is invalid. Expecting null, true or Function`
+        );
+      return condition(context);
+    });
 
+  /**
+   * Given a set of interactions and context, returns the Interaction wich conditions are met and has the highest priority.
+   * If 2 matched interactions have the same priority throws an error.
+   * @param interactions
+   * @param context
+   * @return {*}
+   */
   getTargetInteraction = (interactions, context) => {
-    // TODO retornar interacao que deve ser executada, levando em conta a prioridade cadastrada
+    const interactionCandidates = this.getInteractionCandidates(
+      interactions,
+      context
+    );
+    return this.getHighOrderPriorityInteraction(interactionCandidates);
   };
 
+  /**
+   * Given a set of interactions, returns the interaction with highest priority. If 2 interactions have the same priority it throws an error.
+   * @param interactions
+   * @return {*}
+   */
+  getHighOrderPriorityInteraction = interactions => {
+    if (interactions.length === 1) return interactions[0];
+    const highestPriority = interactions.reduce(
+      (a, b) => (a > b ? a : b),
+      Number.MIN_SAFE_INTEGER
+    );
+    const highestInteractions = interactions.filter(i => i === highestPriority);
+    if (highestInteractions.length > 1) {
+      const interactionsIds = highestInteractions
+        .map(i => i.id || 'undefined interaction')
+        .join(', ');
+      throw new MultipleInteractionsMatched(
+        `Multiple interactions matched for context: ${interactionsIds}`
+      );
+    }
+    return highestInteractions[0];
+  };
+
+  /**
+   * Given a topic and context, returns the topic Interaction wich conditions are met and has the highest priority.
+   * If 2 matched interactions have the same priority throws an error.
+   * @param topic
+   * @param context
+   * @return {*}
+   */
   getTopicTargetInteraction = (topic, context) => {
-    const topicInteractions = this.getTopicInteractions(topic);
+    const topicInteractions = this.getTopicInteractions(topic.id);
     return this.getTargetInteraction(topicInteractions, context);
   };
 
@@ -209,7 +273,7 @@ export default class LinusDialogBase {
     const topicTokenizers = this.getTopicTokenizers(topic);
     const messageTokens = await this.runTokenizers(message, topicTokenizers);
     const enrichedContext = this.enrichContext(ctx, messageTokens);
-    const targetItnteraction = this.getTargetInteraction(
+    const targetItnteraction = this.getTopicTargetInteraction(
       topic,
       enrichedContext
     );

@@ -17,48 +17,48 @@ const registerTestTokenizers = (...tokenizersIds) => {
 };
 
 describe('LinusDialogBase', () => {
-  // describe('LinusDialogBase: Script interpretation', () => {
-  //   const stepFunctionFeedback = { feedback: `()=>{true}` };
-  //   const stepObjectFeedback = {
-  //     feedback: {
-  //       type: 'REPLY',
-  //       data: { type: 'text', content: 'Feedback Reply Text' },
-  //     },
-  //   };
-  //
-  //   test('Steps feedback should be interpreted if is string', () => {
-  //     const steps = linus.interpretSteps([{ ...stepFunctionFeedback }]);
-  //     expect(steps[0]).toBeInstanceOf(Function);
-  //   });
-  //
-  //   test('Steps feedback should be untouched if not String', () => {
-  //     const steps = linus.interpretSteps([{ ...stepObjectFeedback }]);
-  //     expect(steps[0]).toBe(stepObjectFeedback);
-  //   });
-  //
-  //   test('All steps feedback should be interpreted and keep order', () => {
-  //     const steps = linus.interpretSteps([
-  //       { ...stepFunctionFeedback },
-  //       { ...stepObjectFeedback },
-  //     ]);
-  //     expect(steps[0]).toBeInstanceOf(Function);
-  //     expect(steps[1]).toBe(stepObjectFeedback);
-  //   });
-  //
-  //   test('Invalid feedback string should throw, when interpreted', () => {
-  //     const invalidStep = { feedback: `()->'syntaxError'` };
-  //     expect(() => linus.interpretSteps([invalidStep])).toThrow();
-  //   });
-  //
-  //   test('All steps feedback should be interpreted and keep order', () => {
-  //     const steps = linus.interpretSteps([
-  //       { ...stepFunctionFeedback },
-  //       { ...stepObjectFeedback },
-  //     ]);
-  //     expect(steps[0]).toBeInstanceOf(Function);
-  //     expect(steps[1]).toBe(stepObjectFeedback);
-  //   });
-  // });
+  describe('LinusDialogBase: Script interpretation', () => {
+    const stepFunctionFeedback = { feedback: `()=>{true}` };
+    const stepObjectFeedback = {
+      feedback: {
+        type: 'REPLY',
+        data: { type: 'text', content: 'Feedback Reply Text' },
+      },
+    };
+
+    test('Steps feedback should be interpreted if is string', () => {
+      const steps = linus.interpretSteps([{ ...stepFunctionFeedback }]);
+      expect(steps[0].feedback).toEqual(expect.any(Function));
+    });
+
+    test('Steps feedback should be untouched if not String', () => {
+      const steps = linus.interpretSteps([{ ...stepObjectFeedback }]);
+      expect(steps[0]).toMatchObject(stepObjectFeedback);
+    });
+
+    test('All steps feedback should be interpreted and keep order', () => {
+      const steps = linus.interpretSteps([
+        { ...stepFunctionFeedback },
+        { ...stepObjectFeedback },
+      ]);
+      expect(steps[0].feedback).toEqual(expect.any(Function));
+      expect(steps[1]).toMatchObject(stepObjectFeedback);
+    });
+
+    test('Invalid feedback string should throw, when interpreted', () => {
+      const invalidStep = { feedback: `()->'syntaxError'` };
+      expect(() => linus.interpretSteps([invalidStep])).toThrow();
+    });
+
+    test('All steps feedback should be interpreted and keep order', () => {
+      const steps = linus.interpretSteps([
+        { ...stepFunctionFeedback },
+        { ...stepObjectFeedback },
+      ]);
+      expect(steps[0].feedback).toEqual(expect.any(Function));
+      expect(steps[1]).toMatchObject(stepObjectFeedback);
+    });
+  });
 
   describe('LinusDialogBase: Tokenizer Operations', () => {
     // register tokenizers
@@ -180,5 +180,15 @@ describe('LinusDialogBase', () => {
       const topicTokenizers = linus.getTopicTokenizers(topic);
       expect(topicTokenizers.length).toBe(1);
     });
+  });
+
+  describe('LinusDialogBase: Interaction Retrival', () => {
+    test('getTopicInteractions should return all passed topic id interactions and no other topic',()=>{
+
+    });
+
+    test('getInteractionCandidates should return all possible ')
+
+
   });
 });

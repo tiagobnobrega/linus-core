@@ -12,7 +12,7 @@
       "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
     "lint:js": "npx eslint --fix ./src/*.js",
     "build": "npm run build:split && npm run build:unified",
-    "build:split": "webpack --mode development",
+    "build:split": "webpack",
     "build:unified": "webpack --config webpack.unified.config"
   },
   "lint-staged": {
@@ -30,7 +30,8 @@
   "author": "Tiago Nobrega",
   "license": "ISC",
   "jest": {
-    "coverageDirectory": "./docs/coverage"
+    "coverageDirectory": "./docs/coverage",
+    "coveragePathIgnorePatterns": ["/node_modules/", "/src/utils/test/"]
   },
   "devDependencies": {
     "add": "^2.0.6",
