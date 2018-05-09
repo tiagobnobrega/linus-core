@@ -2,6 +2,6 @@ export const stepSource = (feedback = `()=>{true}`) => ({
   feedback,
 });
 
-export const interactionSource = ({ condition = `()=>{true}`,actions }) => ({
+export const interactionSource = ({ condition = `()=>{true}`}) => ({
   condition,
 });

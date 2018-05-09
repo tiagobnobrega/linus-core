@@ -26,9 +26,8 @@ export default class LinusDialogBase {
     this.src = {
       bot,
       topics: _.keyBy(topics, 'id'),
-      interactions: _.keyBy(
-        this.interpretInteractionScritps(interactions),
-        i => `${i.topicId}:${i.id}`
+      interactions: this.groupInteractionsByTopicId(
+        this.interpretInteractionScritps(interactions)
       ),
     };
 
@@ -37,17 +36,29 @@ export default class LinusDialogBase {
   }
 
   /**
+   * Group interactions by topic id
+   * @param interactions
+   * @return {Object} - Grouped interactions by topicId
+   */
+  groupInteractionsByTopicId = interactions =>
+    interactions.reduce((a, b) => {
+      const ret = a;
+      ret[b.topicId] = ret[b.topicId] || [];
+      ret[b.topicId] = [...ret[b.topicId], b];
+      return ret;
+    }, {});
+
+  /**
    * Interpret string conditions for function & calls interpretActions on interaction actions
    * @param interactions
    */
-  interpretInteractionScritps = (interactions = []) => {
+  interpretInteractionScritps = (interactions = []) =>
     // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
     interactions.map(i => ({
       ...i,
       condition: i.condition && this.interpreter.require(i.condition),
       actions: this.interpretActions(i.actions),
     }));
-  };
 
   /**
    * Interpret string conditions for function & calls interpretSteps on action steps
@@ -197,6 +208,8 @@ export default class LinusDialogBase {
    * @param topicId
    * @return {*}
    */
+  // getTopicInteractions = topicId => this.src.interactions[topicId];
+
   getTopicInteractions = topicId => this.src.interactions[topicId];
 
   /**
@@ -208,10 +221,11 @@ export default class LinusDialogBase {
   getInteractionCandidates = (interactions, context) =>
     interactions.filter(i => {
       const { condition, id = 'undefined interaction' } = i;
-      if (!condition || condition === true) return true;
+      if (condition == null || condition === true) return true;
+      if (condition === false) return false; // TODO: Evaluate...makes no sense. Should it be invalid ?
       if (!_.isFunction(condition))
         throw new InvalidCondition(
-          `Interaction '${id}' condition is invalid. Expecting null, true or Function`
+          `Interaction '${id}' condition is invalid. Expecting null, truthy, falsy or Function`
         );
       return condition(context);
     });
@@ -239,7 +253,7 @@ export default class LinusDialogBase {
   getHighOrderPriorityInteraction = interactions => {
     if (interactions.length === 1) return interactions[0];
     const highestPriority = interactions.reduce(
-      (a, b) => (a > b ? a : b),
+      (a, b) => ((a.priority || 0) > (b.priority || 0) ? a : b),
       Number.MIN_SAFE_INTEGER
     );
     const highestInteractions = interactions.filter(i => i === highestPriority);

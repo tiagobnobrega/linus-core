@@ -38,10 +38,29 @@ module.exports = {
     {
       botId: 'test-bot',
       topicId: 'ROOT',
-      id: 'hi',
+      id: 'fallback',
+      condition: 'c=> true',
+      priority: -99,
       actons: [
         {
-          condition: 'c=> !!c.intents.hi',
+          steps: [
+            {
+              feedback: {
+                type: 'REPLY',
+                data: { type: 'text', content: 'Hi, how may I assist You ?' },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      botId: 'test-bot',
+      topicId: 'ROOT',
+      id: 'hi',
+      condition: 'c=> !!c.intents.hi',
+      actons: [
+        {
           steps: [
             {
               feedback: {
@@ -57,9 +76,9 @@ module.exports = {
       botId: 'test-bot',
       topicId: 'ROOT',
       id: 'hiFunction',
+      condition: 'c=> !!c.intents.hiFunction',
       actons: [
         {
-          condition: 'c=> !!c.intents.hiFunction',
           steps: [
             {
               feedback: `() => ({
@@ -75,9 +94,9 @@ module.exports = {
       botId: 'test-bot',
       topicId: 'ROOT',
       id: 'movie_suggestion',
+      condition: 'c=> !!c.intents.movieSuggestion',
       actons: [
         {
-          condition: 'c=> !!c.intents.movieSuggestion',
           steps: [
             {
               feedback: {

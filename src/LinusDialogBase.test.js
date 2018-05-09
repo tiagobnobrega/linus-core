@@ -1,4 +1,9 @@
-import LinusDialogBase from './LinusDialogBase';
+import LinusDialogBase, {
+  ConditionScriptError,
+  ScriptError,
+  InvalidCondition,
+  MultipleInteractionsMatched,
+} from './LinusDialogBase';
 import botTestData from './utils/test/test-bot-data';
 
 import { validTokenizer, testTokenizer } from './utils/test/tokenizers';
@@ -17,6 +22,39 @@ const registerTestTokenizers = (...tokenizersIds) => {
 };
 
 describe('LinusDialogBase', () => {
+  describe('LinusDialogBase: Initialization', () => {
+    test('Should store bot argument in src', () => {
+      const { bot } = linus.src;
+      expect(bot).toMatchObject(botTestData.bot);
+    });
+
+    test('Should store topics argument as object in src', () => {
+      const { topics } = linus.src;
+      expect(topics).not.toEqual(expect.any(Array));
+      expect(Object.keys(topics).length).toBe(botTestData.topics.length);
+    });
+
+    test('Should store interactions argument as object in src', () => {
+      const { interactions } = linus.src;
+      let topicIds = botTestData.interactions.map(({ topicId }) => topicId);
+      topicIds = [...new Set(topicIds)];
+      expect(interactions).not.toEqual(expect.any(Array));
+      expect(Object.keys(interactions)).toEqual(
+        expect.arrayContaining(topicIds)
+      );
+    });
+
+    test('groupInteractionsByTopicId should return object w/ grouped interactions by topic id', () => {
+      const grouped = linus.groupInteractionsByTopicId(
+        botTestData.interactions
+      );
+      let topicIds = botTestData.interactions.map(({ topicId }) => topicId);
+      topicIds = [...new Set(topicIds)];
+      expect(grouped).not.toEqual(expect.any(Array));
+      expect(Object.keys(grouped)).toEqual(expect.arrayContaining(topicIds));
+    });
+  });
+
   describe('LinusDialogBase: Script interpretation', () => {
     const stepFunctionFeedback = { feedback: `()=>{true}` };
     const stepObjectFeedback = {
@@ -57,6 +95,13 @@ describe('LinusDialogBase', () => {
       ]);
       expect(steps[0].feedback).toEqual(expect.any(Function));
       expect(steps[1]).toMatchObject(stepObjectFeedback);
+    });
+
+    test('interpretInteractionScritps should return same amount of interactions', () => {
+      const { interactions } = botTestData;
+      const interpreted = linus.interpretInteractionScritps(interactions);
+      expect(interpreted).toEqual(expect.any(Array));
+      expect(interpreted.length).toBe(interactions.length);
     });
   });
 
@@ -183,12 +228,60 @@ describe('LinusDialogBase', () => {
   });
 
   describe('LinusDialogBase: Interaction Retrival', () => {
-    test('getTopicInteractions should return all passed topic id interactions and no other topic',()=>{
-
+    test('getTopicInteractions should return all passed topic id interactions and no other topic interactions', () => {
+      const interactions = linus.getTopicInteractions('MOVIE_SUGGESTION');
+      expect(interactions.length).toBe(2);
+      const interactionIds = interactions.map(i => i.id);
+      expect(interactionIds).toEqual(
+        expect.arrayContaining(['complete_data', 'incomplete_data'])
+      );
     });
 
-    test('getInteractionCandidates should return all possible ')
+    test('getInteractionCandidates should return all and only interaction wich condition or is null or evaluates to truthy', () => {
+      const makeInteraction = (id, condition) => ({
+        id,
+        condition,
+      });
+      const candidates = linus.getInteractionCandidates(
+        [
+          makeInteraction('t1', () => true),
+          makeInteraction('t2', () => 'true'),
+          makeInteraction('t3', c => c.shouldi3),
+          makeInteraction('t4'),
+          makeInteraction('t5', null),
+          makeInteraction('f1', () => false),
+          makeInteraction('f2', c => c.shouldi5),
+          makeInteraction('f3', false),
+        ],
+        { shouldi3: true }
+      );
+      expect(candidates).toEqual(expect.any(Array));
+      expect(candidates.map(({ id }) => id)).toEqual(
+        expect.arrayContaining(['t1', 't2', 't3', 't4', 't5'])
+      );
+      expect(candidates.map(({ id }) => id)).not.toEqual(
+        expect.arrayContaining(['f1', 'f2'])
+      );
+    });
 
+    test('getInteractionCandidates should throw if any interaction condition is not null, truthy, falsy or Function', () => {
+      const callFn = candidate => () =>
+        linus.getInteractionCandidates([candidate], {});
+      expect(callFn({ condition: 55 })).toThrow(InvalidCondition);
+      expect(callFn({ condition: {} })).toThrow(InvalidCondition);
+      expect(callFn({ condition: [] })).toThrow(InvalidCondition);
+      expect(callFn({ condition: () => 55 })).not.toThrow();
+      expect(callFn({ condition: false })).not.toThrow();
+      expect(callFn({ condition: true })).not.toThrow();
+      expect(callFn({ condition: null })).not.toThrow();
+    });
 
+    
+
+    // test('getHighOrderPriorityInteraction should return the interaction with highest priority', () => {});
+    //
+    // test('getHighOrderPriorityInteraction should throw if 2 interactions have highest priority', () => {});
+    //
+    // test('getTargetInteraction should return highest priority interaction wich condition evalutaes to truthy', () => {});
   });
 });
