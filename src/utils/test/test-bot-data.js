@@ -32,9 +32,42 @@ module.exports = {
       ignoreTokens: null,
       onEnter: null,
     },
+    {
+      id: 'GET_TOPIC_TARGET_INTERACTION',
+      botId: 'test-bot',
+      useGlobalTokenizers: true,
+      tokenizers: [],
+      ignoreTokens: null,
+      onEnter: null,
+    },
+
   ],
 
   interactions: [
+    {
+      botId: 'test-bot',
+      topicId: 'GET_TOPIC_TARGET_INTERACTION',
+      id: 'i1',
+      condition: 'c=> true',
+      priority: -99,
+      actons: [],
+    },
+    {
+      botId: 'test-bot',
+      topicId: 'GET_TOPIC_TARGET_INTERACTION',
+      id: 'i2',
+      condition: 'c=> false',
+      priority: 99,
+      actons: [],
+    },
+    {
+      botId: 'test-bot',
+      topicId: 'GET_TOPIC_TARGET_INTERACTION',
+      id: 'target-interaction',
+      condition: 'c=> true',
+      priority: 0,
+      actons: [],
+    },
     {
       botId: 'test-bot',
       topicId: 'ROOT',

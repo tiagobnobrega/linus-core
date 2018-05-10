@@ -1,8 +1,9 @@
 import LinusDialogBase, {
   ConditionScriptError,
-  ScriptError,
   InvalidCondition,
   MultipleInteractionsMatched,
+  INTERNAL_ATTR as LINUS_INTERNAL_ATTR,
+  SAFE_ATTR as LINUS_SAFE_ATTR,
 } from './LinusDialogBase';
 import botTestData from './utils/test/test-bot-data';
 
@@ -237,6 +238,23 @@ describe('LinusDialogBase', () => {
       );
     });
 
+    test('getInteractionCandidates should pass context object to condition function', () => {
+      const makeInteraction = (id, condition) => ({
+        id,
+        condition,
+      });
+      const candidates = linus.getInteractionCandidates(
+        [
+          makeInteraction('c1', c => !!c.contextVar),
+          makeInteraction('c2', () => true),
+        ],
+        { contextVar: true }
+      );
+      expect(candidates.map(({ id }) => id)).toEqual(
+        expect.arrayContaining(['c1', 'c2'])
+      );
+    });
+
     test('getInteractionCandidates should return all and only interaction wich condition or is null or evaluates to truthy', () => {
       const makeInteraction = (id, condition) => ({
         id,
@@ -276,12 +294,149 @@ describe('LinusDialogBase', () => {
       expect(callFn({ condition: null })).not.toThrow();
     });
 
-    
+    test('getHighOrderPriorityInteraction should return the interaction with highest priority', () => {
+      const makeCandidate = (id, priority) => ({
+        id,
+        priority,
+      });
 
-    // test('getHighOrderPriorityInteraction should return the interaction with highest priority', () => {});
-    //
-    // test('getHighOrderPriorityInteraction should throw if 2 interactions have highest priority', () => {});
-    //
-    // test('getTargetInteraction should return highest priority interaction wich condition evalutaes to truthy', () => {});
+      const hopi = linus.getHighOrderPriorityInteraction([
+        makeCandidate('c1', 0),
+        makeCandidate('c2', 0),
+        makeCandidate('c3', 12),
+        makeCandidate('c4', -1),
+      ]);
+      expect(hopi.id).toBe('c3');
+    });
+
+    test('getHighOrderPriorityInteraction should throw if 2 interactions have highest priority', () => {
+      const makeCandidate = (id, priority) => ({
+        id,
+        priority,
+      });
+
+      const callFn = () =>
+        linus.getHighOrderPriorityInteraction([
+          makeCandidate('c1', 12),
+          makeCandidate('c2', 0),
+          makeCandidate('c3', 12),
+          makeCandidate('c4', -1),
+        ]);
+      expect(callFn).toThrow(MultipleInteractionsMatched);
+    });
+
+    test('getHighOrderPriorityInteraction should return if single interaction is provided', () => {
+      const hopi = linus.getHighOrderPriorityInteraction([
+        { id: 'i1', priority: 0 },
+      ]);
+      expect(hopi.id).toBe('i1');
+    });
+
+    test('getHighOrderPriorityInteraction should throw  correctly even if no id for a interaction is provided', () => {
+      const callFn = () =>
+        linus.getHighOrderPriorityInteraction([
+          { priority: 0 },
+          { id: 'i', priority: 0 },
+        ]);
+      expect(callFn).toThrow(MultipleInteractionsMatched);
+    });
+
+    test('getTargetInteraction should return highest priority interaction wich condition evalutaes to truthy', () => {
+      const makeCandidate = (id, priority, condition) => ({
+        id,
+        priority,
+        condition,
+      });
+
+      const hopi = linus.getTargetInteraction(
+        [
+          makeCandidate('c1', 9999, () => false),
+          makeCandidate('c2', 1, () => true),
+          makeCandidate('c3', 2, () => true),
+        ],
+        {}
+      );
+      expect(hopi.id).toBe('c3');
+    });
+
+    // TODO: Slipt test into unit test and integration tests ????
+    test('getTopicTargetInteraction should return highest priority interaction wich condition evalutaes to truthy and belongs to topic', () => {
+      // look at testBotData to understand test
+      const interaction = linus.getTopicTargetInteraction(
+        { id: 'GET_TOPIC_TARGET_INTERACTION' },
+        {}
+      );
+      expect(interaction.id).toBe('target-interaction');
+    });
+  });
+
+  describe('LinusDialogBase: Enrich Context', () => {
+    test('Should add new attributes to context', () => {
+      const initialContext = { foo: 'fooVal' };
+      const tokens2Merge = { bar: 'barVal' };
+      const enriched = linus.enrichContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooVal',
+        bar: 'barVal',
+      });
+    });
+
+    test('Should change existing attributes in context', () => {
+      const initialContext = { foo: 'fooVal', bar: 'barVal' };
+      const tokens2Merge = { foo: 'fooValNew', bar: undefined };
+      const enriched = linus.enrichContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject(tokens2Merge);
+    });
+
+    test('Should change existing attributes in context', () => {
+      const initialContext = { foo: 'fooVal' };
+      const tokens2Merge = { foo: 'fooValNew' };
+      const enriched = linus.enrichContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+      });
+    });
+
+    test('INTERNAL_ATTR should be remain untouched', () => {
+      const initialContext = {
+        foo: 'fooVal',
+        [LINUS_INTERNAL_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      };
+      const tokens2Merge = {
+        foo: 'fooValNew',
+        [LINUS_INTERNAL_ATTR]: { foo: 'fooValNew', baz: 'bazVal' },
+      };
+      const enriched = linus.enrichContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+        [LINUS_INTERNAL_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      });
+    });
+
+    test('SAFE_ATTR should be deep merged', () => {
+      const initialContext = {
+        foo: 'fooVal',
+        [LINUS_SAFE_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      };
+      const tokens2Merge = {
+        foo: 'fooValNew',
+        [LINUS_SAFE_ATTR]: { foo: 'fooValNew', baz: 'bazVal' },
+      };
+      const enriched = linus.enrichContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+        [LINUS_SAFE_ATTR]: {
+          foo: 'fooValNew',
+          bar: 'barVal',
+          baz: 'bazVal',
+        },
+      });
+    });
+
+    test('Internal attributes should be preserved', () => {});
+
+    // test('Persistent attributes should be preserved if NOT explicity redefined', () => {});
+
+    // test('Persistent attributes should be replaced if explicity redefined', () => {});
   });
 });

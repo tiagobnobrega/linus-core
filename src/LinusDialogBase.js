@@ -8,7 +8,8 @@ export class ScriptError extends extendError() {}
 export class ConditionScriptError extends extendError(ScriptError) {}
 export class MultipleInteractionsMatched extends extendError() {}
 
-const INTERNAL_ATTR = 'env';
+export const INTERNAL_ATTR = 'env';
+export const SAFE_ATTR = 'safe';
 export default class LinusDialogBase {
   src = {};
   messageTokenizers = {};
@@ -180,9 +181,17 @@ export default class LinusDialogBase {
    * @param {Object} tokens - Tokens to enrich context
    * @return {{[p: string]: *}} - Enriched context
    */
+  // TODO: Para o setContext tem que fazer uma lógica melhor dos campos safe
+  //       Safe attributes should be preserved if NOT explicity redefined
+  //       Safe attributes should be replaced if explicity redefined
   enrichContext = (context, tokens) => {
     const internalAttrs = { ...context[INTERNAL_ATTR] };
-    return { ...context, ...tokens, ...{ [INTERNAL_ATTR]: internalAttrs } };
+    return {
+      ...context,
+      ...tokens,
+      [SAFE_ATTR]: { ...context[SAFE_ATTR], ...tokens[SAFE_ATTR] },
+      [INTERNAL_ATTR]: internalAttrs,
+    };
   };
 
   /**
@@ -208,8 +217,6 @@ export default class LinusDialogBase {
    * @param topicId
    * @return {*}
    */
-  // getTopicInteractions = topicId => this.src.interactions[topicId];
-
   getTopicInteractions = topicId => this.src.interactions[topicId];
 
   /**
@@ -218,7 +225,7 @@ export default class LinusDialogBase {
    * @param context
    * @return {*}
    */
-  getInteractionCandidates = (interactions, context) =>
+  getInteractionCandidates = (interactions = [], context) =>
     interactions.filter(i => {
       const { condition, id = 'undefined interaction' } = i;
       if (condition == null || condition === true) return true;
@@ -252,17 +259,22 @@ export default class LinusDialogBase {
    */
   getHighOrderPriorityInteraction = interactions => {
     if (interactions.length === 1) return interactions[0];
-    const highestPriority = interactions.reduce(
-      (a, b) => ((a.priority || 0) > (b.priority || 0) ? a : b),
-      Number.MIN_SAFE_INTEGER
+
+    const highestPriority = interactions.reduce((a, b) => {
+      const bPriority = b.priority || 0;
+      return a > bPriority ? a : bPriority;
+    }, Number.MIN_SAFE_INTEGER);
+
+    const highestInteractions = interactions.filter(
+      i => i.priority === highestPriority
     );
-    const highestInteractions = interactions.filter(i => i === highestPriority);
+
     if (highestInteractions.length > 1) {
       const interactionsIds = highestInteractions
         .map(i => i.id || 'undefined interaction')
         .join(', ');
       throw new MultipleInteractionsMatched(
-        `Multiple interactions matched for context: ${interactionsIds}`
+        `Multiple interactions matched w/ same priority (${highestPriority}): ${interactionsIds}`
       );
     }
     return highestInteractions[0];
