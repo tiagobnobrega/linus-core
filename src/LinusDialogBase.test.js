@@ -238,12 +238,12 @@ describe('LinusDialogBase', () => {
       );
     });
 
-    test('getInteractionCandidates should pass context object to condition function', () => {
+    test('getCandidates should pass context object to condition function', () => {
       const makeInteraction = (id, condition) => ({
         id,
         condition,
       });
-      const candidates = linus.getInteractionCandidates(
+      const candidates = linus.getCandidates(
         [
           makeInteraction('c1', c => !!c.contextVar),
           makeInteraction('c2', () => true),
@@ -255,12 +255,12 @@ describe('LinusDialogBase', () => {
       );
     });
 
-    test('getInteractionCandidates should return all and only interaction wich condition or is null or evaluates to truthy', () => {
+    test('getCandidates should return all and only interaction wich condition or is null or evaluates to truthy', () => {
       const makeInteraction = (id, condition) => ({
         id,
         condition,
       });
-      const candidates = linus.getInteractionCandidates(
+      const candidates = linus.getCandidates(
         [
           makeInteraction('t1', () => true),
           makeInteraction('t2', () => 'true'),
@@ -282,9 +282,9 @@ describe('LinusDialogBase', () => {
       );
     });
 
-    test('getInteractionCandidates should throw if any interaction condition is not null, truthy, falsy or Function', () => {
+    test('getCandidates should throw if any interaction condition is not null, truthy, falsy or Function', () => {
       const callFn = candidate => () =>
-        linus.getInteractionCandidates([candidate], {});
+        linus.getCandidates([candidate], {});
       expect(callFn({ condition: 55 })).toThrow(InvalidCondition);
       expect(callFn({ condition: {} })).toThrow(InvalidCondition);
       expect(callFn({ condition: [] })).toThrow(InvalidCondition);

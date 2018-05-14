@@ -220,19 +220,19 @@ export default class LinusDialogBase {
   getTopicInteractions = topicId => this.src.interactions[topicId];
 
   /**
-   * Returns all interactions with condition function returns truthy
-   * @param interactions
+   * Returns all elements(any w/ condition) with condition function returns truthy
+   * @param elements
    * @param context
    * @return {*}
    */
-  getInteractionCandidates = (interactions = [], context) =>
-    interactions.filter(i => {
-      const { condition, id = 'undefined interaction' } = i;
+  getCandidates = (elements = [], context) =>
+    elements.filter((e, ind) => {
+      const { condition, id = 'undefined interaction' } = e;
       if (condition == null || condition === true) return true;
-      if (condition === false) return false; // TODO: Evaluate...makes no sense. Should it be invalid ?
+      if (condition === false) return false;
       if (!_.isFunction(condition))
         throw new InvalidCondition(
-          `Interaction '${id}' condition is invalid. Expecting null, truthy, falsy or Function`
+          `Candidate [${ind}] '${id}' condition is invalid. Expecting null, truthy, falsy or Function`
         );
       return condition(context);
     });
@@ -245,10 +245,7 @@ export default class LinusDialogBase {
    * @return {*}
    */
   getTargetInteraction = (interactions, context) => {
-    const interactionCandidates = this.getInteractionCandidates(
-      interactions,
-      context
-    );
+    const interactionCandidates = this.getCandidates(interactions, context);
     return this.getHighOrderPriorityInteraction(interactionCandidates);
   };
 
@@ -290,6 +287,41 @@ export default class LinusDialogBase {
   getTopicTargetInteraction = (topic, context) => {
     const topicInteractions = this.getTopicInteractions(topic.id);
     return this.getTargetInteraction(topicInteractions, context);
+  };
+
+  runInteraction = async (interaction, context) => {
+    const actions = this.getCandidates(interaction.actions);
+    const feedbacks = [];
+    for (let i = 0, size = actions.length; i < size; i + 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const actionFeedbacks = await this.runAction(
+        actions[i],
+        context,
+        feedbacks
+      );
+      feedbacks.unshift(...actionFeedbacks);
+    }
+  };
+
+  runAction = async (action, context, feedbacks = []) => {
+    const nextFeedbacks = [...feedbacks];
+    for (let i = 0, size = action.steps.length; i < size; i + 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const feedback = await this.runStep(
+        action.steps[i],
+        context,
+        nextFeedbacks[0]
+      );
+      nextFeedbacks.unshift(feedback);
+    }
+    return nextFeedbacks;
+  };
+
+  runStep = async (step, context, feedback) => {
+    if (_.isFunction(step)) {
+      return step(context, feedback);
+    }
+    return step;
   };
 
   resolve = async (message, ctx) => {
