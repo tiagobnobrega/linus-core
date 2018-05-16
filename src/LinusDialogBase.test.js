@@ -24,6 +24,13 @@ const registerTestTokenizers = (...tokenizersIds) => {
 
 describe('LinusDialogBase', () => {
   describe('LinusDialogBase: Initialization', () => {
+    test('Should be able to initialize w/o arguments', () => {
+      const callFn = () => {
+        linus = new LinusDialogBase();
+      };
+      expect(callFn).not.toThrow();
+    });
+
     test('Should store bot argument in src', () => {
       const { bot } = linus.src;
       expect(bot).toMatchObject(botTestData.bot);
@@ -378,25 +385,72 @@ describe('LinusDialogBase', () => {
   });
 
   describe('LinusDialogBase: Interaction Execution', () => {
-    test('resolveStepFeedback should return a Promise that resolves to {Object}feedback value', () => {});
+    test('resolveStepFeedback should return a Promise that resolves to {Object}feedback value', () => {
+      const feedback = { type: 'TEST' };
+      return linus
+        .resolveStepFeedback(feedback)
+        .then(resolved => expect(resolved).toMatchObject(feedback));
+    });
 
-    test('resolveStepFeedback should return a Promise that resolves to {Function}feedback return value', () => {});
+    test('resolveStepFeedback should return a Promise that resolves to {Function}feedback return value', () => {
+      const feedback = { type: 'TEST' };
+      const feedbackFn = () => feedback;
+      return linus
+        .resolveStepFeedback(feedbackFn)
+        .then(resolved => expect(resolved).toMatchObject(feedback));
+    });
 
-    test('resolveStepFeedback should return a Promise that resolves to {Promise}feedback resolved value', () => {});
+    test('resolveStepFeedback should return a Promise that resolves to {Promise}feedback resolved value', () => {
+      const feedback = { type: 'TEST' };
+      const feedbackPromise = async () => feedback;
+      return linus
+        .resolveStepFeedback(feedbackPromise)
+        .then(resolved => expect(resolved).toMatchObject(feedback));
+    });
 
-    test('resolveStepFeedback should call {Function}feedback passing context and passed feedback', () => {});
+    test('resolveStepFeedback should call {Function}feedback passing context and passed feedback', () => {
+      const feedbackFn = (context, feedback) => [
+        context.message,
+        feedback.type,
+      ];
+      return linus
+        .resolveStepFeedback(feedbackFn, { message: 'test' }, { type: 'test2' })
+        .then(resolved =>
+          expect(resolved).toEqual(expect.arrayContaining(['test', 'test2']))
+        );
+    });
 
-    test('runAction should execute every step in action', () => {});
+    test('runAction should execute every step feedback in action', () => {
+      const mockFn = (name, retVal) =>
+        jest
+          .fn()
+          .mockName(name)
+          .mockReturnValue(retVal);
+      const fn1 = mockFn('fn1', 1);
+      const fn2 = mockFn('fn1', 2);
+      const steps = [
+        { feedback: fn1 },
+        { feedback: { type: 'test' } },
+        { feedback: fn2 },
+      ];
 
-    test('runAction should execute every step in action synchronously ', () => {});
+      return linus.runAction({ steps }).then(feedbacks => {
+        expect(fn1).toHaveBeenCalledTimes(1);
+        expect(fn2).toHaveBeenCalledTimes(1);
+      });
+    });
 
-    test('runAction should execute every step in action passing the last feedback return to the next {Function}feedback', () => {});
+    // TODO: what if feedback returns null or undefined???
 
-    test('runAction should return a array of feedbacks from action steps concatenated w/ passed feedbacks in the inverse order of execution', () => {});
-
-    test('runInteraction should run every candidate action', () => {});
-
-    test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {});
+    // test('runAction should execute every step in action synchronously ', () => {});
+    //
+    // test('runAction should execute every step in action passing the last feedback return to the next {Function}feedback', () => {});
+    //
+    // test('runAction should return a array of feedbacks from action steps concatenated w/ passed feedbacks in the inverse order of execution', () => {});
+    //
+    // test('runInteraction should run every candidate action', () => {});
+    //
+    // test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {});
   });
 
   describe('LinusDialogBase: Enrich Context', () => {

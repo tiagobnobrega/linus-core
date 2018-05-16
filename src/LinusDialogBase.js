@@ -14,14 +14,16 @@ export default class LinusDialogBase {
   src = {};
   messageTokenizers = {};
 
-  constructor({
-    bot = requiredParam('bot'),
-    topics = [],
-    interactions = [],
-    handlers = [],
-    tokenizers = [],
-    sandboxScope = {},
-  }) {
+  constructor(
+    {
+      bot = requiredParam('bot'),
+      topics = [],
+      interactions = [],
+      handlers = [],
+      tokenizers = [],
+      sandboxScope = {},
+    } = { bot: { rootTopic: 'ROOT' } }
+  ) {
     this.interpreter = RTInterpreter(sandboxScope);
     // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
     this.src = {
@@ -307,7 +309,7 @@ export default class LinusDialogBase {
   runInteraction = async (interaction, context) => {
     const actions = this.getCandidates(interaction.actions);
     const feedbacks = [];
-    for (let i = 0, size = actions.length; i < size; i + 1) {
+    for (let i = 0, size = actions.length; i < size; i += 1) {
       // eslint-disable-next-line no-await-in-loop
       const actionFeedbacks = await this.runAction(
         actions[i],
@@ -328,15 +330,18 @@ export default class LinusDialogBase {
    * @return {Promise<*[]>}
    */
   runAction = async (action, context, feedbacks = []) => {
+    console.log(`runAction!!!!!!!!!!!!`);
     const nextFeedbacks = [...feedbacks];
 
-    for (let i = 0, size = action.steps.length; i < size; i + 1) {
+    for (let i = 0, size = action.steps.length; i < size; i += 1) {
+      console.log(`Running step ${i}`);
       // eslint-disable-next-line no-await-in-loop
       const feedback = await this.resolveStepFeedback(
         action.steps[i].feedback,
         context,
         nextFeedbacks[0]
       );
+      console.log(`Runned step ${i}, feedback:`, feedback);
       nextFeedbacks.unshift(feedback);
       // TODO: Call stepDidRun event
       // TODO: Should apply feedback if it's a context change of some sort

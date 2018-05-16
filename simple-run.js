@@ -16,9 +16,22 @@
 //
 // throw rtErr;
 
-// const LinusDialog = require('./src/LinusDialogBase');
-//
-// const linus = new LinusDialog();
+const LinusDialogBase = require('./lib/LinusDialogBase').default;
+
+console.log(LinusDialogBase);
+const linus = new LinusDialogBase();
+
+const steps = [
+  { feedback: () => 1 },
+  { feedback: { type: 'test' } },
+  { feedback: () => 2 },
+];
+
+return linus.runAction({ steps }).then(feedbacks => {
+  console.log('DONE!!!!!');
+  console.log('feedbacks:', feedbacks);
+});
+
 // const cadidates = [
 //   {
 //     condition: () => {

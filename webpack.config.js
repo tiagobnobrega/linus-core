@@ -3,6 +3,7 @@ const path = require('path');
 module.exports = {
   mode: 'production',
   entry: {
+    LinusDialogBase: './src/LinusDialogBase.js',
     LinusDialog: './src/LinusDialog.js',
     tokenizers: './src/tokenizers/index.js',
     handlers: './src/handlers/index.js',
