@@ -282,9 +282,16 @@ describe('LinusDialogBase', () => {
       );
     });
 
+    test('getCandidates should throw ConditionScriptError if condition function has error', () => {
+      const callFn = candidate => () => linus.getCandidates([candidate], {});
+      const candidate = {
+        condition: () => console.invalidMethod(),
+      };
+      expect(callFn(candidate)).toThrow(ConditionScriptError);
+    });
+
     test('getCandidates should throw if any interaction condition is not null, truthy, falsy or Function', () => {
-      const callFn = candidate => () =>
-        linus.getCandidates([candidate], {});
+      const callFn = candidate => () => linus.getCandidates([candidate], {});
       expect(callFn({ condition: 55 })).toThrow(InvalidCondition);
       expect(callFn({ condition: {} })).toThrow(InvalidCondition);
       expect(callFn({ condition: [] })).toThrow(InvalidCondition);
@@ -368,6 +375,28 @@ describe('LinusDialogBase', () => {
       );
       expect(interaction.id).toBe('target-interaction');
     });
+  });
+
+  describe('LinusDialogBase: Interaction Execution', () => {
+    test('resolveStepFeedback should return a Promise that resolves to {Object}feedback value', () => {});
+
+    test('resolveStepFeedback should return a Promise that resolves to {Function}feedback return value', () => {});
+
+    test('resolveStepFeedback should return a Promise that resolves to {Promise}feedback resolved value', () => {});
+
+    test('resolveStepFeedback should call {Function}feedback passing context and passed feedback', () => {});
+
+    test('runAction should execute every step in action', () => {});
+
+    test('runAction should execute every step in action synchronously ', () => {});
+
+    test('runAction should execute every step in action passing the last feedback return to the next {Function}feedback', () => {});
+
+    test('runAction should return a array of feedbacks from action steps concatenated w/ passed feedbacks in the inverse order of execution', () => {});
+
+    test('runInteraction should run every candidate action', () => {});
+
+    test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {});
   });
 
   describe('LinusDialogBase: Enrich Context', () => {

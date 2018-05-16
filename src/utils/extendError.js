@@ -6,7 +6,7 @@
  * @return {ExtendableBuiltin}
  */
 const extendError = (cls = Error) => {
-  function ExtendableBuiltin(message) {
+  function ExtendableBuiltin(message, err, keepOriginalTrace = false) {
     const superInstance = Error.call(this, message);
     Object.defineProperty(this, 'name', {
       configurable: true,
@@ -14,21 +14,26 @@ const extendError = (cls = Error) => {
       value: this.constructor.name,
       writable: true,
     });
-    Object.defineProperty(this, 'message', {
-      configurable: true,
-      enumerable: false,
-      value: message,
-      writable: true,
-    });
     // eslint-disable-next-line no-prototype-builtins
     if (Error.hasOwnProperty('captureStackTrace')) {
       Error.captureStackTrace(this, this.constructor);
-      return;
     }
-    Object.defineProperty(this, 'stack', {
+    const originalStack =
+      err && err.stack && keepOriginalTrace ? `\n\n${superInstance.stack}` : '';
+    const cause = err && err.stack ? `\nCaused by: ${err && err.stack}` : '';
+    if (err && err.stack) {
+      Object.defineProperty(this, 'stack', {
+        configurable: true,
+        enumerable: false,
+        value: `${message}::${err && err.message}${originalStack}${cause}`,
+        writable: true,
+      });
+    }
+
+    Object.defineProperty(this, 'message', {
       configurable: true,
       enumerable: false,
-      value: superInstance.stack,
+      value: `${message}:: ${err && err.message}`,
       writable: true,
     });
   }

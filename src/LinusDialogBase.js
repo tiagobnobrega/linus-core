@@ -234,7 +234,16 @@ export default class LinusDialogBase {
         throw new InvalidCondition(
           `Candidate [${ind}] '${id}' condition is invalid. Expecting null, truthy, falsy or Function`
         );
-      return condition(context);
+      try {
+        return condition(context);
+      } catch (err) {
+        const csErr = new ConditionScriptError(
+          'Error evaluating candidate condition function',
+          err
+        );
+        // csErr.stack =
+        throw csErr;
+      }
     });
 
   /**
@@ -289,6 +298,12 @@ export default class LinusDialogBase {
     return this.getTargetInteraction(topicInteractions, context);
   };
 
+  /**
+   * Execute interactions matched actions and returns a Promise which will resolve to a array of feedbacks
+   * @param interaction
+   * @param context
+   * @return {Promise<void>}
+   */
   runInteraction = async (interaction, context) => {
     const actions = this.getCandidates(interaction.actions);
     const feedbacks = [];
@@ -300,28 +315,48 @@ export default class LinusDialogBase {
         feedbacks
       );
       feedbacks.unshift(...actionFeedbacks);
+      // TODO: Call ActionDidRun event;
     }
+    // TODO: call InteractionDidRun envent;
   };
 
+  /**
+   * Execute all steps of some action and returns a Promise which will resolve to a array of feedbacks.
+   * @param action
+   * @param context
+   * @param feedbacks
+   * @return {Promise<*[]>}
+   */
   runAction = async (action, context, feedbacks = []) => {
     const nextFeedbacks = [...feedbacks];
+
     for (let i = 0, size = action.steps.length; i < size; i + 1) {
       // eslint-disable-next-line no-await-in-loop
-      const feedback = await this.runStep(
-        action.steps[i],
+      const feedback = await this.resolveStepFeedback(
+        action.steps[i].feedback,
         context,
         nextFeedbacks[0]
       );
       nextFeedbacks.unshift(feedback);
+      // TODO: Call stepDidRun event
+      // TODO: Should apply feedback if it's a context change of some sort
     }
     return nextFeedbacks;
   };
 
-  runStep = async (step, context, feedback) => {
-    if (_.isFunction(step)) {
-      return step(context, feedback);
+  /**
+   * Returns a Promise wich will resolve to stepFeedback or stepFeedback return value (if it's a function)
+   * or stepFeedback resolved value (if it's a Promise).
+   * @param stepFeedback
+   * @param context
+   * @param feedback
+   * @return {Promise<any>}
+   */
+  resolveStepFeedback = (stepFeedback, context, feedback) => {
+    if (_.isFunction(stepFeedback)) {
+      return Promise.resolve(stepFeedback(context, feedback));
     }
-    return step;
+    return Promise.resolve(stepFeedback);
   };
 
   resolve = async (message, ctx) => {
@@ -335,7 +370,10 @@ export default class LinusDialogBase {
       topic,
       enrichedContext
     );
-
-    // TODO: @@@@@@@@@@@@@@@@@@@@ CONTINUAR @@@@@@@@@@@@@@@@@@@@@@@@@@
+    const interactionFeedbacks = this.runInteraction(
+      targetItnteraction,
+      enrichedContext
+    );
+    return { feedbacks: interactionFeedbacks, context: enrichedContext };
   };
 }
