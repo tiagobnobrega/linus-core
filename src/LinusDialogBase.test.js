@@ -8,6 +8,7 @@ import LinusDialogBase, {
 import botTestData from './utils/test/test-bot-data';
 
 import { validTokenizer, testTokenizer } from './utils/test/tokenizers';
+import { wait } from './utils/test/helpers';
 
 // globals:
 let linus = new LinusDialogBase(botTestData);
@@ -427,14 +428,14 @@ describe('LinusDialogBase', () => {
           .mockName(name)
           .mockReturnValue(retVal);
       const fn1 = mockFn('fn1', 1);
-      const fn2 = mockFn('fn1', 2);
+      const fn2 = mockFn('fn2', 2);
       const steps = [
         { feedback: fn1 },
         { feedback: { type: 'test' } },
         { feedback: fn2 },
       ];
 
-      return linus.runAction({ steps }).then(feedbacks => {
+      return linus.runAction({ steps }, {}).then(() => {
         expect(fn1).toHaveBeenCalledTimes(1);
         expect(fn2).toHaveBeenCalledTimes(1);
       });
@@ -442,14 +443,85 @@ describe('LinusDialogBase', () => {
 
     // TODO: what if feedback returns null or undefined???
 
-    // test('runAction should execute every step in action synchronously ', () => {});
-    //
-    // test('runAction should execute every step in action passing the last feedback return to the next {Function}feedback', () => {});
-    //
-    // test('runAction should return a array of feedbacks from action steps concatenated w/ passed feedbacks in the inverse order of execution', () => {});
-    //
-    // test('runInteraction should run every candidate action', () => {});
-    //
+    test('runAction should execute every step in action synchronously ', () => {
+      const feedbackFn = delay => () =>
+        wait(delay).then(() => performance.now());
+      const steps = [
+        { feedback: feedbackFn(300) },
+        { feedback: feedbackFn(100) },
+        { feedback: feedbackFn(200) },
+      ];
+
+      return linus.runAction({ steps }, {}).then(feedbacks => {
+        const f0 = feedbacks[0];
+        const f1 = feedbacks[1];
+        const f2 = feedbacks[2];
+        expect(f2).toBeLessThan(f1);
+        expect(f1).toBeLessThan(f0);
+      });
+    });
+
+    test('runAction should execute every step in action passing the last feedback return to the next {Function}feedback', () => {
+      const feedbackFn = delay => (context, lastFeedback = 0) =>
+        wait(delay).then(() => lastFeedback + 1);
+      const steps = [
+        { feedback: feedbackFn(300) },
+        { feedback: feedbackFn(100) },
+        { feedback: feedbackFn(200) },
+      ];
+      return linus.runAction({ steps }, {}).then(feedbacks => {
+        expect(feedbacks).toEqual([3, 2, 1]);
+      });
+    });
+
+    test('runAction should return a array of feedbacks action steps concatenated w/ passed feedbacks in the inverse order of execution', () => {
+      const feedbackFn = (delay, value) => () => wait(delay).then(() => value);
+      const steps = [
+        { feedback: feedbackFn(300, '1') },
+        { feedback: feedbackFn(100, '2') },
+        { feedback: feedbackFn(200, '3') },
+      ];
+      const initialFeedbacks = ['A', 'B', 'C'];
+      return linus
+        .runAction({ steps }, {}, initialFeedbacks)
+        .then(feedbacks => {
+          expect(feedbacks).toEqual(['3', '2', '1', 'A', 'B', 'C']);
+        });
+    });
+
+    // TODO: implement
+    // test('runAction should apply feedback before next step execution', () => {});
+    // test('runAction should call event before next step execution', () => {});
+
+    test('runInteraction should run every candidate action', () => {
+      const actions = [
+        { condition: () => true, testId: 1, steps:[] },
+        { condition: () => false, testId: 2, steps:[] },
+        { condition: c => c.conditionalReturn, testId: 3, steps:[] },
+      ];
+
+      const context = { conditionalReturn: true };
+      const mockReturn = 'mockReturn';
+      const fnMock = jest
+        .fn()
+        .mockName('runActionMock')
+        .mockReturnValue('');
+      const srcRunAction = linus.runAction;
+      // Mock linus.runAction
+      linus.runAction = (...args) => {
+        fnMock(...args);
+        return srcRunAction(...args);
+      };
+
+      return linus.runInteraction({ actions }, context).then(() => {
+        expect(fnMock).toHaveBeenCalledTimes(2);
+        expect(fnMock.mock.calls).toEqual([
+          [actions[0], context],
+          [actions[0], context, [mockReturn]],
+        ]);
+      });
+    });
+
     // test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {});
   });
 

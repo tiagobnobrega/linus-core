@@ -227,7 +227,7 @@ export default class LinusDialogBase {
    * @param context
    * @return {*}
    */
-  getCandidates = (elements = [], context) =>
+  getCandidates = (elements = [], context = requiredParam('context')) =>
     elements.filter((e, ind) => {
       const { condition, id = 'undefined interaction' } = e;
       if (condition == null || condition === true) return true;
@@ -307,15 +307,17 @@ export default class LinusDialogBase {
    * @return {Promise<void>}
    */
   runInteraction = async (interaction, context) => {
-    const actions = this.getCandidates(interaction.actions);
+    const actions = this.getCandidates(interaction.actions, context);
     const feedbacks = [];
     for (let i = 0, size = actions.length; i < size; i += 1) {
       // eslint-disable-next-line no-await-in-loop
+      // console.log({action:actions[i],context, feedbacks});
       const actionFeedbacks = await this.runAction(
         actions[i],
         context,
         feedbacks
       );
+      console.log('actionFeedbacks:',actionFeedbacks);
       feedbacks.unshift(...actionFeedbacks);
       // TODO: Call ActionDidRun event;
     }
@@ -329,19 +331,21 @@ export default class LinusDialogBase {
    * @param feedbacks
    * @return {Promise<*[]>}
    */
-  runAction = async (action, context, feedbacks = []) => {
-    console.log(`runAction!!!!!!!!!!!!`);
+  runAction = async (
+    action,
+    context = requiredParam('context'),
+    feedbacks = []
+  ) => {
     const nextFeedbacks = [...feedbacks];
-
+    // console.log('steps.length:'+action.steps.length);
     for (let i = 0, size = action.steps.length; i < size; i += 1) {
-      console.log(`Running step ${i}`);
       // eslint-disable-next-line no-await-in-loop
       const feedback = await this.resolveStepFeedback(
         action.steps[i].feedback,
         context,
         nextFeedbacks[0]
       );
-      console.log(`Runned step ${i}, feedback:`, feedback);
+      console.log('runAction feedback:',feedback);
       nextFeedbacks.unshift(feedback);
       // TODO: Call stepDidRun event
       // TODO: Should apply feedback if it's a context change of some sort
@@ -358,6 +362,7 @@ export default class LinusDialogBase {
    * @return {Promise<any>}
    */
   resolveStepFeedback = (stepFeedback, context, feedback) => {
+    // TODO Should all feedbacks be passed as a third parameter?
     if (_.isFunction(stepFeedback)) {
       return Promise.resolve(stepFeedback(context, feedback));
     }
