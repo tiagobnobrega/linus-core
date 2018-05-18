@@ -308,20 +308,19 @@ export default class LinusDialogBase {
    */
   runInteraction = async (interaction, context) => {
     const actions = this.getCandidates(interaction.actions, context);
-    const feedbacks = [];
+    let feedbacks = [];
     for (let i = 0, size = actions.length; i < size; i += 1) {
       // eslint-disable-next-line no-await-in-loop
-      // console.log({action:actions[i],context, feedbacks});
       const actionFeedbacks = await this.runAction(
         actions[i],
         context,
         feedbacks
       );
-      console.log('actionFeedbacks:',actionFeedbacks);
-      feedbacks.unshift(...actionFeedbacks);
+      feedbacks = [...actionFeedbacks];
       // TODO: Call ActionDidRun event;
     }
     // TODO: call InteractionDidRun envent;
+    return feedbacks;
   };
 
   /**
@@ -336,7 +335,7 @@ export default class LinusDialogBase {
     context = requiredParam('context'),
     feedbacks = []
   ) => {
-    const nextFeedbacks = [...feedbacks];
+    let nextFeedbacks = [...feedbacks];
     // console.log('steps.length:'+action.steps.length);
     for (let i = 0, size = action.steps.length; i < size; i += 1) {
       // eslint-disable-next-line no-await-in-loop
@@ -345,8 +344,7 @@ export default class LinusDialogBase {
         context,
         nextFeedbacks[0]
       );
-      console.log('runAction feedback:',feedback);
-      nextFeedbacks.unshift(feedback);
+      nextFeedbacks = [feedback, ...nextFeedbacks];
       // TODO: Call stepDidRun event
       // TODO: Should apply feedback if it's a context change of some sort
     }

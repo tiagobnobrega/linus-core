@@ -495,19 +495,31 @@ describe('LinusDialogBase', () => {
 
     test('runInteraction should run every candidate action', () => {
       const actions = [
-        { condition: () => true, testId: 1, steps:[] },
-        { condition: () => false, testId: 2, steps:[] },
-        { condition: c => c.conditionalReturn, testId: 3, steps:[] },
+        {
+          condition: () => true,
+          testId: 1,
+          steps: [{ feedback: 1 }],
+        },
+        {
+          condition: () => false,
+          testId: 2,
+          steps: [{ feedback: 2 }],
+        },
+        {
+          condition: c => c.conditionalReturn,
+          testId: 3,
+          steps: [{ feedback: 3 }],
+        },
       ];
 
       const context = { conditionalReturn: true };
-      const mockReturn = 'mockReturn';
       const fnMock = jest
         .fn()
         .mockName('runActionMock')
         .mockReturnValue('');
       const srcRunAction = linus.runAction;
       // Mock linus.runAction
+
       linus.runAction = (...args) => {
         fnMock(...args);
         return srcRunAction(...args);
@@ -515,14 +527,52 @@ describe('LinusDialogBase', () => {
 
       return linus.runInteraction({ actions }, context).then(() => {
         expect(fnMock).toHaveBeenCalledTimes(2);
-        expect(fnMock.mock.calls).toEqual([
-          [actions[0], context],
-          [actions[0], context, [mockReturn]],
-        ]);
+        expect(fnMock.mock.calls[0]).toEqual([actions[0], context, []]);
+        expect(fnMock.mock.calls[1]).toEqual([actions[2], context, [1]]);
       });
     });
 
-    // test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {});
+    test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {
+      const actions = [
+        {
+          condition: () => true,
+          testId: 1,
+          steps: [{ feedback: 1 }],
+        },
+        {
+          condition: () => false,
+          testId: 2,
+          steps: [{ feedback: 2 }],
+        },
+        {
+          condition: c => c.conditionalReturn,
+          testId: 3,
+          steps: [{ feedback: 3 }],
+        },
+      ];
+
+      const context = { conditionalReturn: true };
+      const fnMock = jest
+        .fn()
+        .mockName('runActionMock')
+        .mockReturnValue('');
+      const srcRunAction = linus.runAction;
+      // Mock linus.runAction
+
+      linus.runAction = (...args) => {
+        fnMock(...args);
+        return srcRunAction(...args);
+      };
+
+      return linus.runInteraction({ actions }, context).then(feedbacks => {
+        expect(feedbacks).toEqual([3, 1]);
+      });
+    });
+  });
+
+  describe('LinusDialogBase: Apply feedbacks', () => {
+    //TODO: Implment Apply feedbacks
+
   });
 
   describe('LinusDialogBase: Enrich Context', () => {
