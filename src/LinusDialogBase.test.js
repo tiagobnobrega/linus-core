@@ -220,6 +220,12 @@ describe('LinusDialogBase', () => {
       expect(topic.id).toBe(topicId);
     });
 
+    test('getTopic should throw if topicId is NOT a known topic id', () => {
+      const topicId = 'INVALID_TOPIC_ID';
+      const callFn = () => linus.getTopic(topicId);
+      expect(callFn).toThrow();
+    });
+
     test('getTopicTokenizers should return global tokenizers if useGlobalTokenizers is NOT false', () => {
       registerTestTokenizers('globalTokenizer', 'rootGlobalTokenizer');
       const topicId = 'ROOT';
@@ -452,7 +458,7 @@ describe('LinusDialogBase', () => {
         { feedback: feedbackFn(200) },
       ];
 
-      return linus.runAction({ steps }, {}).then(feedbacks => {
+      return linus.runAction({ steps }, {}).then(({ feedbacks }) => {
         const f0 = feedbacks[0];
         const f1 = feedbacks[1];
         const f2 = feedbacks[2];
@@ -469,7 +475,7 @@ describe('LinusDialogBase', () => {
         { feedback: feedbackFn(100) },
         { feedback: feedbackFn(200) },
       ];
-      return linus.runAction({ steps }, {}).then(feedbacks => {
+      return linus.runAction({ steps }, {}).then(({ feedbacks }) => {
         expect(feedbacks).toEqual([3, 2, 1]);
       });
     });
@@ -484,7 +490,7 @@ describe('LinusDialogBase', () => {
       const initialFeedbacks = ['A', 'B', 'C'];
       return linus
         .runAction({ steps }, {}, initialFeedbacks)
-        .then(feedbacks => {
+        .then(({ feedbacks }) => {
           expect(feedbacks).toEqual(['3', '2', '1', 'A', 'B', 'C']);
         });
     });
@@ -570,9 +576,199 @@ describe('LinusDialogBase', () => {
     });
   });
 
-  describe('LinusDialogBase: Apply feedbacks', () => {
-    //TODO: Implment Apply feedbacks
+  describe('LinusDialogBase: Handle feedbacks', () => {
+    test('feedback type SET_CONTEXT should call setContext function', () => {
+      const fnMock = jest.fn().mockName('setContextMock');
+      const srcFn = linus.setContext;
+      linus.setContext = (...args) => {
+        fnMock(...args);
+        return srcFn(...args);
+      };
+      const initialContext = {};
+      const feedbacks = [{ type: 'SET_CONTEXT', payload: { foo: 'bar' } }];
 
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(fnMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('feedback type MERGE_CONTEXT should call enrichContext function', () => {
+      const fnMock = jest.fn().mockName('enrichContextMock');
+      const srcFn = linus.enrichContext;
+      linus.enrichContext = (...args) => {
+        fnMock(...args);
+        return srcFn(...args);
+      };
+      const initialContext = {};
+      const feedbacks = [{ type: 'MERGE_CONTEXT', payload: { foo: 'bar' } }];
+
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(fnMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('feedback type SET_TOPIC should call setTopic function', () => {
+      const fnMock = jest.fn().mockName('setTopic');
+      const srcFn = linus.setTopic;
+      linus.setTopic = (...args) => {
+        fnMock(...args);
+        return srcFn(...args);
+      };
+      const initialContext = {};
+      const feedbacks = [{ type: 'SET_TOPIC', payload: 'ROOT' }];
+
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(fnMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('feedback type REPLY should not throw or call context manipulation functions', () => {
+      const mockFn = fnName => {
+        const fnMock = jest.fn().mockName(`${fnName}Mock`);
+        const srcFn = linus[fnName];
+        linus[fnName] = (...args) => {
+          fnMock(...args);
+          return srcFn(...args);
+        };
+        return fnMock;
+      };
+
+      test('next feedback should receive updated context', () => {
+        const feedbacks = [
+          { type: 'MERGE_CONTEXT', payload: { foo: 0 } },
+          { type: 'MERGE_CONTEXT', payload: { bar: 1 } },
+          { type: 'MERGE_CONTEXT', payload: { baz: 2 } },
+        ];
+
+        const retContext = linus.handleFeedbacks(feedbacks, {});
+        expect(retContext).toMatchObject({ foo: 0, bar: 1, baz: 2 });
+      });
+
+      const mockSetContext = mockFn('setContext');
+      const mockSetTopic = mockFn('setTopic');
+      const mockEnrichcontext = mockFn('enrichContext');
+
+      const initialContext = {};
+      const feedbacks = [{ type: 'REPLY', payload: 'Some text' }];
+
+      const callFn = () => linus.handleFeedbacks(feedbacks, initialContext);
+      expect(callFn).not.toThrow();
+      expect(mockSetContext).not.toBeCalled();
+      expect(mockSetTopic).not.toBeCalled();
+      expect(mockEnrichcontext).not.toBeCalled();
+    });
+
+    test('feedback w/ custom type should not call setContext function', () => {
+      const mockFn = fnName => {
+        const fnMock = jest.fn().mockName(`${fnName}Mock`);
+        const srcFn = linus[fnName];
+        linus[fnName] = (...args) => {
+          fnMock(...args);
+          return srcFn(...args);
+        };
+        return fnMock;
+      };
+
+      const mockSetContext = mockFn('setContext');
+      const mockSetTopic = mockFn('setTopic');
+      const mockEnrichcontext = mockFn('enrichContext');
+
+      const initialContext = {};
+      const feedbacks = [
+        { type: 'CUSTOM_FEEDBACK_TYPE', payload: 'Some text' },
+      ];
+
+      const callFn = () => linus.handleFeedbacks(feedbacks, initialContext);
+      expect(callFn).not.toThrow();
+      expect(mockSetContext).not.toBeCalled();
+      expect(mockSetTopic).not.toBeCalled();
+      expect(mockEnrichcontext).not.toBeCalled();
+    });
+  });
+vit
+  describe('LinusDialogBase: Set Topic', () => {
+    test('Should change topicId in context object to passed id in payload', () => {
+      const context = linus.setTopic(
+        { [LINUS_INTERNAL_ATTR]: { topicId: 'foo' } },
+        'ROOT'
+      );
+      expect(context).toMatchObject({
+        [LINUS_INTERNAL_ATTR]: { topicId: 'ROOT' },
+      });
+    });
+
+    test('Should throw if topicId passed id in payload is unknown', () => {});
+  });
+
+  describe('LinusDialogBase: Set Context', () => {
+    test('Should replace non SAFE/INTERNAL attributes', () => {
+      const initialContext = { foo: 'fooVal' };
+      const tokens2Merge = { bar: 'barVal' };
+      const enriched = linus.setContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        bar: 'barVal',
+      });
+    });
+
+    test('Should change existing attributes in context', () => {
+      const initialContext = { foo: 'fooVal', bar: 'barVal' };
+      const tokens2Merge = { foo: 'fooValNew', bar: undefined };
+      const enriched = linus.setContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject(tokens2Merge);
+    });
+
+    test('Should change existing attributes in context', () => {
+      const initialContext = { foo: 'fooVal' };
+      const tokens2Merge = { foo: 'fooValNew' };
+      const enriched = linus.setContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+      });
+    });
+
+    test('INTERNAL_ATTR should be remain untouched', () => {
+      const initialContext = {
+        foo: 'fooVal',
+        [LINUS_INTERNAL_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      };
+      const tokens2Merge = {
+        foo: 'fooValNew',
+        [LINUS_INTERNAL_ATTR]: { foo: 'fooValNew', baz: 'bazVal' },
+      };
+      const enriched = linus.setContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+        [LINUS_INTERNAL_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      });
+    });
+
+    test('SAFE_ATTR should be replaced if explicity defined', () => {
+      const initialContext = {
+        foo: 'fooVal',
+        [LINUS_SAFE_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      };
+      const tokens2Merge = {
+        foo: 'fooValNew',
+        [LINUS_SAFE_ATTR]: { baz: 'bazVal' },
+      };
+      const enriched = linus.setContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+        [LINUS_SAFE_ATTR]: { baz: 'bazVal' },
+      });
+    });
+
+    test('SAFE_ATTR should NOT be replaced if NOT explicity defined', () => {
+      const initialContext = {
+        foo: 'fooVal',
+        [LINUS_SAFE_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      };
+      const tokens2Merge = {
+        foo: 'fooValNew',
+      };
+      const enriched = linus.setContext(initialContext, tokens2Merge);
+      expect(enriched).toMatchObject({
+        foo: 'fooValNew',
+        [LINUS_SAFE_ATTR]: { foo: 'fooVal', bar: 'barVal' },
+      });
+    });
   });
 
   describe('LinusDialogBase: Enrich Context', () => {
@@ -637,11 +833,19 @@ describe('LinusDialogBase', () => {
         },
       });
     });
+  });
 
-    test('Internal attributes should be preserved', () => {});
-
-    // test('Persistent attributes should be preserved if NOT explicity redefined', () => {});
-
-    // test('Persistent attributes should be replaced if explicity redefined', () => {});
+  describe('LinusDialogBase: Events', () => {
+    test('Should emit an event', () => {
+      let emittedData = null;
+      linus.on('customEvent', data => {
+        emittedData = data;
+      });
+      const mockFn = jest.fn().mockName('customEventListener');
+      linus.on('customEvent', mockFn);
+      linus.emit('customEvent', 'test');
+      expect(emittedData).toBe('test');
+      expect(mockFn).toHaveBeenCalledTimes(1);
+    });
   });
 });

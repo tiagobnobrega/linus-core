@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import EventEmitter from 'eventemitter3';
 import requiredParam from './utils/requiredParam';
 import RTInterpreter from './utils/RTInterpreter';
 import extendError from './utils/extendError';
@@ -7,10 +8,11 @@ export class InvalidCondition extends extendError() {}
 export class ScriptError extends extendError() {}
 export class ConditionScriptError extends extendError(ScriptError) {}
 export class MultipleInteractionsMatched extends extendError() {}
+export class InvalidTopicIdError extends extendError() {}
 
 export const INTERNAL_ATTR = 'env';
 export const SAFE_ATTR = 'safe';
-export default class LinusDialogBase {
+export default class LinusDialogBase extends EventEmitter {
   src = {};
   messageTokenizers = {};
 
@@ -24,6 +26,7 @@ export default class LinusDialogBase {
       sandboxScope = {},
     } = { bot: { rootTopic: 'ROOT' } }
   ) {
+    super();
     this.interpreter = RTInterpreter(sandboxScope);
     // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
     this.src = {
@@ -178,14 +181,13 @@ export default class LinusDialogBase {
   };
 
   /**
-   * Merge tokens into context, keeping internal attributes untouched
+   * Merge tokens into context, keeping internal attributes untouched.
+   * Safe attributes are merged into existing safe attributes. If removing is needed
+   * setContext should be used instead.
    * @param {Object} context - Context object to be enriched
    * @param {Object} tokens - Tokens to enrich context
    * @return {{[p: string]: *}} - Enriched context
    */
-  // TODO: Para o setContext tem que fazer uma lógica melhor dos campos safe
-  //       Safe attributes should be preserved if NOT explicity redefined
-  //       Safe attributes should be replaced if explicity redefined
   enrichContext = (context, tokens) => {
     const internalAttrs = { ...context[INTERNAL_ATTR] };
     return {
@@ -197,13 +199,47 @@ export default class LinusDialogBase {
   };
 
   /**
+   * Set the current context as the passed tokens, keeping internal attributes untouched.
+   * Safe attributes are replaced if explicitly set. It's expected for safe attributes to be an Object.
+   * @param context
+   * @param tokens
+   * @return {{[p: String]: {}}}
+   */
+  setContext = (context, tokens) => {
+    const internalAttrs = { ...context[INTERNAL_ATTR] };
+    return {
+      ...tokens,
+      [SAFE_ATTR]: tokens[SAFE_ATTR]
+        ? { ...tokens[SAFE_ATTR] }
+        : context[SAFE_ATTR],
+      [INTERNAL_ATTR]: internalAttrs,
+    };
+  };
+
+  /**
+   * Sets conversation topic by topicId
+   * @param context
+   * @param topicId
+   * @return {*} context
+   */
+  setTopic = (context, topicId) => {
+    this.getTopic(topicId); // throws if unknown topicId
+    return {
+      ...context,
+      [INTERNAL_ATTR]: { ...context[INTERNAL_ATTR], topicId },
+    };
+  };
+
+  /**
    * Get topic by id
    * @param {String} topicId - Topic Id
    * @return {Object<Topic>} - Topic
    */
-  getTopic = topicId =>
-    // TODO: Verificar necessidade, já que src.topics vai ser um objeto indexado pelo id
-    this.src.topics[topicId];
+  getTopic = topicId => {
+    const topic = this.src.topics[topicId];
+    if (!topic) throw new InvalidTopicIdError(`unknown topic id: "${topicId}"`);
+    return topic;
+  };
 
   /**
    * Use passed handler.
@@ -309,14 +345,15 @@ export default class LinusDialogBase {
   runInteraction = async (interaction, context) => {
     const actions = this.getCandidates(interaction.actions, context);
     let feedbacks = [];
+    let nextContext = context;
     for (let i = 0, size = actions.length; i < size; i += 1) {
       // eslint-disable-next-line no-await-in-loop
-      const actionFeedbacks = await this.runAction(
+      const actionReturn = await this.runAction(
         actions[i],
-        context,
+        nextContext,
         feedbacks
       );
-      feedbacks = [...actionFeedbacks];
+      ({ feedbacks, context: nextContext } = actionReturn);
       // TODO: Call ActionDidRun event;
     }
     // TODO: call InteractionDidRun envent;
@@ -336,19 +373,20 @@ export default class LinusDialogBase {
     feedbacks = []
   ) => {
     let nextFeedbacks = [...feedbacks];
-    // console.log('steps.length:'+action.steps.length);
+    let nextContext = context;
     for (let i = 0, size = action.steps.length; i < size; i += 1) {
       // eslint-disable-next-line no-await-in-loop
-      const feedback = await this.resolveStepFeedback(
+      const stepFeedback = await this.resolveStepFeedback(
         action.steps[i].feedback,
-        context,
+        nextContext,
         nextFeedbacks[0]
       );
-      nextFeedbacks = [feedback, ...nextFeedbacks];
+      const stepFeedbacks = _.castArray(stepFeedback);
+      nextContext = this.handleFeedbacks(stepFeedbacks, context);
+      nextFeedbacks = [...stepFeedbacks, ...nextFeedbacks];
       // TODO: Call stepDidRun event
-      // TODO: Should apply feedback if it's a context change of some sort
     }
-    return nextFeedbacks;
+    return { feedbacks: nextFeedbacks, context: nextContext };
   };
 
   /**
@@ -365,6 +403,75 @@ export default class LinusDialogBase {
       return Promise.resolve(stepFeedback(context, feedback));
     }
     return Promise.resolve(stepFeedback);
+  };
+
+  /**
+   * Handle feedback handlers that manipulate context somehow.
+   * @param feedbacks
+   * @param context
+   */
+  handleFeedbacks = (feedbacks = [], context) => {
+    let nextContext = context;
+    feedbacks.forEach(feedback => {
+      const feedbackHandler =
+        feedback.type && this.feedbackHandlers[feedback.type];
+      const prevContext = _.cloneDeep(nextContext);
+      if (feedbackHandler && feedbackHandler.updateContext) {
+        const feedbackChangedContext = feedbackHandler.updateContext(
+          feedback,
+          nextContext
+        );
+        nextContext = { ...feedbackChangedContext };
+        this.emitFeedbackHandlerEvents(
+          feedbackHandler.events,
+          feedback,
+          prevContext,
+          nextContext
+        );
+      }
+    });
+    return nextContext;
+  };
+
+  /**
+   * Emit feedbackHandlers registered events
+   * @param {[String]} events - Events to emit
+   * @param feedback - Feedback that caused event
+   * @param previousContext - Context before feedback
+   * @param nextContext - Context after feedback
+   */
+  emitFeedbackHandlerEvents = (
+    events = [],
+    feedback,
+    previousContext,
+    nextContext
+  ) => {
+    events.forEach(evt => {
+      this.emit(evt, feedback, previousContext, nextContext);
+    });
+  };
+
+  /**
+   * Handlers for each feedback type
+   * @enum {Function}
+   */
+  feedbackHandlers = {
+    SET_CONTEXT: {
+      events: ['stepDidSetContext', 'contextDidUpdate'],
+      updateContext: (feedback, context) =>
+        this.setContext(context, feedback.payload),
+    },
+    MERGE_CONTEXT: {
+      events: ['stepDidMergeContext', 'contextDidUpdate'],
+      updateContext: (feedback, context) =>
+        this.enrichContext(context, feedback.payload),
+    },
+    SET_TOPIC: {
+      events: ['stepDidSetTopic', 'contextDidUpdate'],
+      updateContext: (feedback, context) =>
+        this.setTopic(context, feedback.payload),
+    },
+    REPLY: { events: ['stepDidReply'] },
   };
 
   resolve = async (message, ctx) => {

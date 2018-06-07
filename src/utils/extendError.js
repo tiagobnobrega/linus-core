@@ -30,10 +30,11 @@ const extendError = (cls = Error) => {
       });
     }
 
+    const errMessage = err && err.message && ` :: ${err.message}`;
     Object.defineProperty(this, 'message', {
       configurable: true,
       enumerable: false,
-      value: `${message}:: ${err && err.message}`,
+      value: `${message}${errMessage || ''}`,
       writable: true,
     });
   }
