@@ -629,18 +629,6 @@ describe('LinusDialogBase', () => {
         };
         return fnMock;
       };
-
-      test('next feedback should receive updated context', () => {
-        const feedbacks = [
-          { type: 'MERGE_CONTEXT', payload: { foo: 0 } },
-          { type: 'MERGE_CONTEXT', payload: { bar: 1 } },
-          { type: 'MERGE_CONTEXT', payload: { baz: 2 } },
-        ];
-
-        const retContext = linus.handleFeedbacks(feedbacks, {});
-        expect(retContext).toMatchObject({ foo: 0, bar: 1, baz: 2 });
-      });
-
       const mockSetContext = mockFn('setContext');
       const mockSetTopic = mockFn('setTopic');
       const mockEnrichcontext = mockFn('enrichContext');
@@ -653,6 +641,27 @@ describe('LinusDialogBase', () => {
       expect(mockSetContext).not.toBeCalled();
       expect(mockSetTopic).not.toBeCalled();
       expect(mockEnrichcontext).not.toBeCalled();
+    });
+
+    test('feedback type REPLY should emit stepDidReply event on reply feedback w/ args', () => {
+      const feedbacks = [{ type: 'REPLY', payload: 'Some text' }];
+      const initialContext = {};
+
+      const fnMock = jest.fn().mockName('stepDidReplyCallback');
+      linus.on('stepDidReply',fnMock);
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(fnMock).toBeCalledWith(feedbacks[0],initialContext,initialContext);
+    });
+
+    test('next feedback should receive updated context', () => {
+      const feedbacks = [
+        { type: 'MERGE_CONTEXT', payload: { foo: 0 } },
+        { type: 'MERGE_CONTEXT', payload: { bar: 1 } },
+        { type: 'MERGE_CONTEXT', payload: { baz: 2 } },
+      ];
+
+      const retContext = linus.handleFeedbacks(feedbacks, {});
+      expect(retContext).toMatchObject({ foo: 0, bar: 1, baz: 2 });
     });
 
     test('feedback w/ custom type should not call setContext function', () => {
@@ -682,7 +691,7 @@ describe('LinusDialogBase', () => {
       expect(mockEnrichcontext).not.toBeCalled();
     });
   });
-vit
+
   describe('LinusDialogBase: Set Topic', () => {
     test('Should change topicId in context object to passed id in payload', () => {
       const context = linus.setTopic(

@@ -416,12 +416,14 @@ export default class LinusDialogBase extends EventEmitter {
       const feedbackHandler =
         feedback.type && this.feedbackHandlers[feedback.type];
       const prevContext = _.cloneDeep(nextContext);
-      if (feedbackHandler && feedbackHandler.updateContext) {
-        const feedbackChangedContext = feedbackHandler.updateContext(
-          feedback,
-          nextContext
-        );
-        nextContext = { ...feedbackChangedContext };
+      if (feedbackHandler) {
+        if (feedbackHandler.updateContext) {
+          const feedbackChangedContext = feedbackHandler.updateContext(
+            feedback,
+            nextContext
+          );
+          nextContext = { ...feedbackChangedContext };
+        }
         this.emitFeedbackHandlerEvents(
           feedbackHandler.events,
           feedback,
