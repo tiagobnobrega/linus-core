@@ -189,7 +189,7 @@ describe('LinusDialogBase', () => {
       ];
       const messageTokenizers = await linus.runTokenizers(
         'test output',
-        tokenizers
+        tokenizers.map(t => t.tokenize)
       );
       expect(messageTokenizers.tokenizer1).toBe('test output');
       expect(messageTokenizers.tokenizer2).toBe('test output');
@@ -202,7 +202,7 @@ describe('LinusDialogBase', () => {
       ];
       const messageTokenizers = await linus.runTokenizers(
         'test output',
-        tokenizers
+        tokenizers.map(t => t.tokenize)
       );
       let timediff =
         messageTokenizers.tokenizer1_timestamp -
@@ -570,9 +570,11 @@ describe('LinusDialogBase', () => {
         return srcRunAction(...args);
       };
 
-      return linus.runInteraction({ actions }, context).then(feedbacks => {
-        expect(feedbacks).toEqual([3, 1]);
-      });
+      return linus
+        .runInteraction({ actions }, context)
+        .then(({ feedbacks }) => {
+          expect(feedbacks).toEqual([3, 1]);
+        });
     });
   });
 
@@ -591,6 +593,30 @@ describe('LinusDialogBase', () => {
       expect(fnMock).toHaveBeenCalledTimes(1);
     });
 
+    test('feedback type SET_CONTEXT should emit stepDidSetContext & contextDidUpdate event on reply feedback w/ args', () => {
+      const changedContext = { env: {}, foo: 'bar', safe: {} };
+      const feedbacks = [
+        { type: 'SET_CONTEXT', payload: { foo: 'bar', safe: {} } },
+      ];
+      const initialContext = { safe: { baz: 'baz' } };
+
+      const mockSetContext = jest.fn().mockName('stepDidSetContext');
+      const mockContextDidUpdate = jest.fn().mockName('stepContextDidUpdate');
+      linus.on('stepDidSetContext', mockSetContext);
+      linus.on('contextDidUpdate', mockContextDidUpdate);
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(mockSetContext).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        changedContext
+      );
+      expect(mockContextDidUpdate).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        changedContext
+      );
+    });
+
     test('feedback type MERGE_CONTEXT should call enrichContext function', () => {
       const fnMock = jest.fn().mockName('enrichContextMock');
       const srcFn = linus.enrichContext;
@@ -605,6 +631,28 @@ describe('LinusDialogBase', () => {
       expect(fnMock).toHaveBeenCalledTimes(1);
     });
 
+    test('feedback type MERGE_CONTEXT should emit stepDidMergeContext & contextDidUpdate event on reply feedback w/ args', () => {
+      const changedContext = { env: {}, foo: 'bar', safe: {} };
+      const feedbacks = [{ type: 'MERGE_CONTEXT', payload: changedContext }];
+      const initialContext = {};
+
+      const mockMergeContext = jest.fn().mockName('stepDidMergeContext');
+      const mockContextDidUpdate = jest.fn().mockName('stepContextDidUpdate');
+      linus.on('stepDidMergeContext', mockMergeContext);
+      linus.on('contextDidUpdate', mockContextDidUpdate);
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(mockMergeContext).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        changedContext
+      );
+      expect(mockContextDidUpdate).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        changedContext
+      );
+    });
+
     test('feedback type SET_TOPIC should call setTopic function', () => {
       const fnMock = jest.fn().mockName('setTopic');
       const srcFn = linus.setTopic;
@@ -617,6 +665,28 @@ describe('LinusDialogBase', () => {
 
       linus.handleFeedbacks(feedbacks, initialContext);
       expect(fnMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('feedback type SET_TOPIC should emit stepDidSetTopic & contextDidUpdate event on reply feedback w/ args', () => {
+      const changedContext = { env: { topicId: 'ROOT' } };
+      const feedbacks = [{ type: 'SET_TOPIC', payload: 'ROOT' }];
+      const initialContext = {};
+
+      const mockSetTopic = jest.fn().mockName('stepDidSetTopic');
+      const mockContextDidUpdate = jest.fn().mockName('stepContextDidUpdate');
+      linus.on('stepDidSetTopic', mockSetTopic);
+      linus.on('contextDidUpdate', mockContextDidUpdate);
+      linus.handleFeedbacks(feedbacks, initialContext);
+      expect(mockSetTopic).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        changedContext
+      );
+      expect(mockContextDidUpdate).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        changedContext
+      );
     });
 
     test('feedback type REPLY should not throw or call context manipulation functions', () => {
@@ -648,9 +718,13 @@ describe('LinusDialogBase', () => {
       const initialContext = {};
 
       const fnMock = jest.fn().mockName('stepDidReplyCallback');
-      linus.on('stepDidReply',fnMock);
+      linus.on('stepDidReply', fnMock);
       linus.handleFeedbacks(feedbacks, initialContext);
-      expect(fnMock).toBeCalledWith(feedbacks[0],initialContext,initialContext);
+      expect(fnMock).toBeCalledWith(
+        feedbacks[0],
+        initialContext,
+        initialContext
+      );
     });
 
     test('next feedback should receive updated context', () => {
@@ -855,6 +929,16 @@ describe('LinusDialogBase', () => {
       linus.emit('customEvent', 'test');
       expect(emittedData).toBe('test');
       expect(mockFn).toHaveBeenCalledTimes(1);
+    });
+
+    test('registerEventHandler should register functions for events', () => {
+      const mock1 = jest.fn().mockName('evt1');
+      const mock2 = jest.fn().mockName('evt2');
+      linus.registerEventHandlers({ evt1: mock1, evt2: mock2 });
+      linus.emit('evt1', 'test1');
+      linus.emit('evt2', 'test2');
+      expect(mock1).toHaveBeenCalledTimes(1);
+      expect(mock2).toHaveBeenCalledTimes(1);
     });
   });
 });

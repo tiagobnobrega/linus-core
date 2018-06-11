@@ -40,7 +40,6 @@ module.exports = {
       ignoreTokens: null,
       onEnter: null,
     },
-
   ],
 
   interactions: [
@@ -80,7 +79,10 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: { type: 'text', content: 'Hi, how may I assist You ?' },
+                payload: {
+                  type: 'text',
+                  content: "Sorry. I didn't understand that",
+                },
               },
             },
           ],
@@ -98,7 +100,10 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: { type: 'text', content: 'Hi, how may I assist You ?' },
+                payload: {
+                  type: 'text',
+                  content: 'Hi, how may I assist You ?',
+                },
               },
             },
           ],
@@ -116,7 +121,7 @@ module.exports = {
             {
               feedback: `() => ({
                 type: 'REPLY',
-                data: { type: 'text', content: 'Hi, how may I assist You ?' },
+                payload: { type: 'text', content: 'Hi, how may I assist You ?' },
               })`,
             },
           ],
@@ -154,7 +159,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content:
                     'What kind of movie would you like to watch? And should it be a good or a bad movie ?',
@@ -169,7 +174,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content:
                     'Do you want a good or a bad ${c.entities.movie_genre} movie ?',
@@ -185,7 +190,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content:
                     'What kind of ${c.entities.movie_quality} movie  do You wish to watch?',
@@ -210,7 +215,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content: 'You should watch The Shining',
                 },
@@ -225,7 +230,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content: 'You should watch Final Destination',
                 },
@@ -241,7 +246,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content: 'You should watch Mission Impossible',
                 },
@@ -256,7 +261,7 @@ module.exports = {
             {
               feedback: {
                 type: 'REPLY',
-                data: {
+                payload: {
                   type: 'TEXT',
                   content: 'You should watch Taxi',
                 },

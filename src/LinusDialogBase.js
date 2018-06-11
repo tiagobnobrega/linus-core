@@ -9,6 +9,7 @@ export class ScriptError extends extendError() {}
 export class ConditionScriptError extends extendError(ScriptError) {}
 export class MultipleInteractionsMatched extends extendError() {}
 export class InvalidTopicIdError extends extendError() {}
+export class InvalidTokenizerError extends extendError() {}
 
 export const INTERNAL_ATTR = 'env';
 export const SAFE_ATTR = 'safe';
@@ -80,7 +81,7 @@ export default class LinusDialogBase extends EventEmitter {
 
   /**
    * Interpret string feddbacks for function
-   * @param {Object<Step>} steps - steps to be transformed
+   * @param {Object} steps - steps to be transformed
    * @return {{feedback: *}[]}
    */
   interpretSteps = (steps = []) =>
@@ -104,7 +105,7 @@ export default class LinusDialogBase extends EventEmitter {
       !tokenizer.tokenize ||
       !_.isFunction(tokenizer.tokenize)
     )
-      throw new Error(
+      throw new InvalidTokenizerError(
         `invalid tokenizer ${tokenizer &&
           tokenizer.id}: missing or invalid attribute id or fn`
       );
@@ -118,15 +119,30 @@ export default class LinusDialogBase extends EventEmitter {
         } already registered & overwrite attribute false`
       );
     }
-    this.messageTokenizers[tokenizer.id] = tokenizer.tokenize;
+    this.messageTokenizers[tokenizer.id] = tokenizer.tokenize; // TODO: @@@@@@!!@!@!@!@!@@@@ AQUI DEVE REGISTRAR O OBJETO TOKENIZER INTEIRO, NÃO SÓ A FUNCAO TOKENIZE @@@@!@!@!@@@!@@!@!@!@@!@
   };
 
   /**
    * Register tokenizers on dialog instance
-   * @param {[Object<Tokenizers>]} tokenizers - Tokenizers to register
+   * @param {[Object]} tokenizers - Tokenizers to register
    */
   registerTokenizers = tokenizers => {
     tokenizers.forEach(this.registerTokenizer);
+  };
+
+  /**
+   * Register eventHandlers. The recieved object should have event names as attributes with handler function as their values.
+   * @param {Object} eventHandlers - Object in format {'EVT_NAME': EVT_FUNC(){}}
+   */
+  registerEventHandlers = eventHandlers => {
+    Object.entries(eventHandlers).forEach(([name, fn]) => {
+      if (_.isFunction(fn)) {
+        this.on(name, fn);
+      } else {
+        // TODO: should emit warning event maybe? Use debug lib instead?
+        console.warn(`event ${name} value is not a function`);
+      }
+    });
   };
 
   /**
@@ -135,9 +151,16 @@ export default class LinusDialogBase extends EventEmitter {
    * @param {[Object]} tokenizers - Tokenizers objects
    */
   runTokenizers = async (message, tokenizers) => {
-    const promises = tokenizers.map(
-      tokenizer => Promise.resolve(tokenizer.tokenize(message)) // TODO: place catch to identify tokenizer error
-    );
+    const promises = tokenizers.map(tokenizer => {
+      try {
+        return Promise.resolve(tokenizer(message)); // TODO: place catch to identify tokenizer error
+      } catch (err) {
+        throw new InvalidTokenizerError(
+          `error running tokenizer ${JSON.stringify(tokenizer)}`,
+          err
+        ); // TODO: Preciso saber qual tokeniser deu pau, o id do tokenizer tem que chegar aqui!!!!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      }
+    });
 
     // each value must be an object or it should be ignored
     // should reduce to a single object merging properties
@@ -168,8 +191,8 @@ export default class LinusDialogBase extends EventEmitter {
 
   /**
    * Build tokenizer chain for the topic
-   * @param {Object<Topic>} topic - Dialog topic
-   * @return {[Object<Tokens>]} tokens - Identified tokens
+   * @param {Object} topic - Dialog topic
+   * @return {[Object]} tokens - Identified tokens
    */
   getTopicTokenizers = topic => {
     const globalTokenizers =
@@ -186,7 +209,7 @@ export default class LinusDialogBase extends EventEmitter {
    * setContext should be used instead.
    * @param {Object} context - Context object to be enriched
    * @param {Object} tokens - Tokens to enrich context
-   * @return {{[p: string]: *}} - Enriched context
+   * @return {Object} - Enriched context
    */
   enrichContext = (context, tokens) => {
     const internalAttrs = { ...context[INTERNAL_ATTR] };
@@ -203,7 +226,7 @@ export default class LinusDialogBase extends EventEmitter {
    * Safe attributes are replaced if explicitly set. It's expected for safe attributes to be an Object.
    * @param context
    * @param tokens
-   * @return {{[p: String]: {}}}
+   * @return {Object}
    */
   setContext = (context, tokens) => {
     const internalAttrs = { ...context[INTERNAL_ATTR] };
@@ -226,6 +249,7 @@ export default class LinusDialogBase extends EventEmitter {
     this.getTopic(topicId); // throws if unknown topicId
     return {
       ...context,
+      [SAFE_ATTR]: context[SAFE_ATTR],
       [INTERNAL_ATTR]: { ...context[INTERNAL_ATTR], topicId },
     };
   };
@@ -233,7 +257,7 @@ export default class LinusDialogBase extends EventEmitter {
   /**
    * Get topic by id
    * @param {String} topicId - Topic Id
-   * @return {Object<Topic>} - Topic
+   * @return {Object} - Topic
    */
   getTopic = topicId => {
     const topic = this.src.topics[topicId];
@@ -246,8 +270,9 @@ export default class LinusDialogBase extends EventEmitter {
    * @param {Object} handler - Handler to be used
    */
   use = handler => {
-    const { tokenizers = [] } = handler;
+    const { tokenizers = [], events = {} } = handler;
     this.registerTokenizers(tokenizers);
+    this.registerEventHandlers(events);
   };
 
   /**
@@ -340,7 +365,7 @@ export default class LinusDialogBase extends EventEmitter {
    * Execute interactions matched actions and returns a Promise which will resolve to a array of feedbacks
    * @param interaction
    * @param context
-   * @return {Promise<void>}
+   * @return {Promise<{feedbacks:Array, context:*}>}
    */
   runInteraction = async (interaction, context) => {
     const actions = this.getCandidates(interaction.actions, context);
@@ -354,10 +379,10 @@ export default class LinusDialogBase extends EventEmitter {
         feedbacks
       );
       ({ feedbacks, context: nextContext } = actionReturn);
-      // TODO: Call ActionDidRun event;
     }
-    // TODO: call InteractionDidRun envent;
-    return feedbacks;
+    const ret = { feedbacks, context: nextContext };
+    this.emit('interactionDidRun', ret);
+    return ret;
   };
 
   /**
@@ -384,9 +409,14 @@ export default class LinusDialogBase extends EventEmitter {
       const stepFeedbacks = _.castArray(stepFeedback);
       nextContext = this.handleFeedbacks(stepFeedbacks, context);
       nextFeedbacks = [...stepFeedbacks, ...nextFeedbacks];
-      // TODO: Call stepDidRun event
+      this.emit('stepDidRun', {
+        feedbacks: nextFeedbacks,
+        context: nextContext,
+      });
     }
-    return { feedbacks: nextFeedbacks, context: nextContext };
+    const ret = { feedbacks: nextFeedbacks, context: nextContext };
+    this.emit('actiondidRun', ret);
+    return ret;
   };
 
   /**
@@ -479,7 +509,8 @@ export default class LinusDialogBase extends EventEmitter {
   resolve = async (message, ctx) => {
     // get topic from context
     const topic =
-      this.getTopic(ctx[INTERNAL_ATTR].topicId) || this.src.bot.rootTopic;
+      (ctx[INTERNAL_ATTR] && this.getTopic(ctx[INTERNAL_ATTR].topicId)) ||
+      this.src.bot.rootTopic;
     const topicTokenizers = this.getTopicTokenizers(topic);
     const messageTokens = await this.runTokenizers(message, topicTokenizers);
     const enrichedContext = this.enrichContext(ctx, messageTokens);
@@ -487,10 +518,10 @@ export default class LinusDialogBase extends EventEmitter {
       topic,
       enrichedContext
     );
-    const interactionFeedbacks = this.runInteraction(
-      targetItnteraction,
-      enrichedContext
-    );
-    return { feedbacks: interactionFeedbacks, context: enrichedContext };
+    const {
+      feedbacks: interactionFeedbacks,
+      context: nextContext,
+    } = this.runInteraction(targetItnteraction, enrichedContext);
+    return { feedbacks: interactionFeedbacks, context: nextContext };
   };
 }
