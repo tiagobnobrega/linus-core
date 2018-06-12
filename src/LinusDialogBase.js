@@ -4,7 +4,8 @@ import requiredParam from './utils/requiredParam';
 import RTInterpreter from './utils/RTInterpreter';
 import extendError from './utils/extendError';
 
-export class InvalidCondition extends extendError() {}
+export class RuntimeError extends extendError() {}
+export class InvalidCondition extends extendError(RuntimeError) {}
 export class ScriptError extends extendError() {}
 export class ConditionScriptError extends extendError(ScriptError) {}
 export class MultipleInteractionsMatched extends extendError() {}
@@ -119,7 +120,7 @@ export default class LinusDialogBase extends EventEmitter {
         } already registered & overwrite attribute false`
       );
     }
-    this.messageTokenizers[tokenizer.id] = tokenizer.tokenize; // TODO: @@@@@@!!@!@!@!@!@@@@ AQUI DEVE REGISTRAR O OBJETO TOKENIZER INTEIRO, NÃO SÓ A FUNCAO TOKENIZE @@@@!@!@!@@@!@@!@!@!@@!@
+    this.messageTokenizers[tokenizer.id] = tokenizer; // TODO: @@@@@@!!@!@!@!@!@@@@ AQUI DEVE REGISTRAR O OBJETO TOKENIZER INTEIRO, NÃO SÓ A FUNCAO TOKENIZE @@@@!@!@!@@@!@@!@!@!@@!@
   };
 
   /**
@@ -153,10 +154,10 @@ export default class LinusDialogBase extends EventEmitter {
   runTokenizers = async (message, tokenizers) => {
     const promises = tokenizers.map(tokenizer => {
       try {
-        return Promise.resolve(tokenizer(message)); // TODO: place catch to identify tokenizer error
+        return Promise.resolve(tokenizer.tokenize(message)); // TODO: place catch to identify tokenizer error
       } catch (err) {
         throw new InvalidTokenizerError(
-          `error running tokenizer ${JSON.stringify(tokenizer)}`,
+          `error running tokenizer ${tokenizer.id}`,
           err
         ); // TODO: Preciso saber qual tokeniser deu pau, o id do tokenizer tem que chegar aqui!!!!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
       }
@@ -357,6 +358,10 @@ export default class LinusDialogBase extends EventEmitter {
    * @return {*}
    */
   getTopicTargetInteraction = (topic, context) => {
+    if (!topic || !topic.id)
+      throw new InvalidTopicIdError(
+        `Invalid topic id from topic: "${JSON.stringify(topic)}"`
+      );
     const topicInteractions = this.getTopicInteractions(topic.id);
     return this.getTargetInteraction(topicInteractions, context);
   };
@@ -367,7 +372,10 @@ export default class LinusDialogBase extends EventEmitter {
    * @param context
    * @return {Promise<{feedbacks:Array, context:*}>}
    */
-  runInteraction = async (interaction, context) => {
+  runInteraction = async (
+    interaction = requiredParam('interaction'),
+    context
+  ) => {
     const actions = this.getCandidates(interaction.actions, context);
     let feedbacks = [];
     let nextContext = context;
@@ -508,20 +516,28 @@ export default class LinusDialogBase extends EventEmitter {
 
   resolve = async (message, ctx) => {
     // get topic from context
-    const topic =
-      (ctx[INTERNAL_ATTR] && this.getTopic(ctx[INTERNAL_ATTR].topicId)) ||
-      this.src.bot.rootTopic;
+    const topic = this.getTopic(
+      (ctx[INTERNAL_ATTR] && ctx[INTERNAL_ATTR].topicId) ||
+        this.src.bot.rootTopic
+    );
     const topicTokenizers = this.getTopicTokenizers(topic);
     const messageTokens = await this.runTokenizers(message, topicTokenizers);
     const enrichedContext = this.enrichContext(ctx, messageTokens);
-    const targetItnteraction = this.getTopicTargetInteraction(
+    const targetInteraction = this.getTopicTargetInteraction(
       topic,
       enrichedContext
     );
+    if (!targetInteraction) {
+      throw new InvalidCondition(
+        `No interaction found for: \nTopic:\n${JSON.stringify(
+          topic
+        )}\nContext:\n${JSON.stringify(enrichedContext)}`
+      );
+    }
     const {
       feedbacks: interactionFeedbacks,
       context: nextContext,
-    } = this.runInteraction(targetItnteraction, enrichedContext);
+    } = await this.runInteraction(targetInteraction, enrichedContext);
     return { feedbacks: interactionFeedbacks, context: nextContext };
   };
 }

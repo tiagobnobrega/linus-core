@@ -1,18 +1,22 @@
 const path = require('path');
-const splitConfig = require('./webpack.config');
+const splitConfigs = require('./webpack.config');
 
-const unifiedConfigOverride = {
+const unifiedConfigOverride = (baseCfg, filename) => ({
+  ...baseCfg,
   entry: './src/index.js',
   output: {
+    ...baseCfg.output,
     path: path.resolve(__dirname, './lib'),
-    filename: 'linus.js',
-    libraryTarget: 'umd',
-    globalObject: 'this',
+    filename,
     library: 'linus',
   },
-};
+});
 
-module.exports = {
-  ...splitConfig,
-  ...unifiedConfigOverride,
-};
+module.exports = [
+  {
+    ...unifiedConfigOverride(splitConfigs[0], 'linus.node.js'),
+  },
+  {
+    ...unifiedConfigOverride(splitConfigs[1], 'linus.web.js'),
+  },
+];

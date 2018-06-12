@@ -21,8 +21,8 @@ export default (sandboxScope = {}) => {
     try {
       vm.runInNewContext(`module.exports = ${code}`, sandbox);
     } catch (e) {
-      // throw new RTInterpreterError('Error interpreting source code.', e);
-      throw new RTInterpreterError('Error interpreting source code.');
+      throw new RTInterpreterError(`Error interpreting source code:\n\n ${code}`, e);
+      // throw new RTInterpreterError('Error interpreting source code.');
     }
     return sandbox.module.exports;
   };

@@ -1,7 +1,7 @@
 const path = require('path');
 
-module.exports = {
-  mode: 'production',
+const commonConfig = {
+  mode: 'development',
   entry: {
     LinusDialogBase: './src/LinusDialogBase.js',
     LinusDialog: './src/LinusDialog.js',
@@ -12,10 +12,8 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, './lib'),
-    filename: '[name].js',
-    libraryTarget: 'umd',
     globalObject: 'this',
-    library: ['linus', '[name]'],
+    library: '[name]', // ['linus', '[name]'],
   },
   externals: {
     lodash: {
@@ -35,3 +33,24 @@ module.exports = {
     ],
   },
 };
+
+const nodeConfig = {
+  ...commonConfig,
+  target: 'node',
+  output: {
+    ...commonConfig.output,
+    filename: '[name].node.js',
+    libraryTarget: 'commonjs2',
+  },
+};
+
+const webConfig = {
+  ...commonConfig,
+  target: 'web',
+  output: {
+    ...commonConfig.output,
+    filename: '[name].web.js',
+    libraryTarget: 'umd',
+  },
+};
+module.exports = [nodeConfig, webConfig];

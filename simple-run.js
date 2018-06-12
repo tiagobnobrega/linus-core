@@ -1,42 +1,39 @@
-// const extendError = require('./lib/extendError');
+const { LinusDialog } = require('./lib/linus.node');
+const botTestData = require('./src/utils/test/test-bot-data');
 
-// class RTInterpreterError extends extendError() {}
-// const rtErr = new RTInterpreterError('custom message');
-//
-// try {
-//   console.log(`rtErr.name: ${rtErr.name}`);
-//   console.log(`rtErr.constructor.name: ${rtErr.constructor.name}`);
-//   throw rtErr;
-// } catch (e) {
-//   console.log(
-//     `rtErr instanceOf RTInterpreterError==${e instanceof RTInterpreterError}`
-//   );
-//   console.log(`rtErr instanceOf Error==${e instanceof Error}`);
-// }
-//
-// throw rtErr;
+console.log('LinusDialog', LinusDialog);
 
-const LinusDialogBase = require('./lib/LinusDialogBase').default;
-
-console.log(LinusDialogBase);
-const linus = new LinusDialogBase();
-
-const steps = [
-  { feedback: () => 1 },
-  { feedback: { type: 'test' } },
-  { feedback: () => 2 },
-];
-
-return linus.runAction({ steps }).then(feedbacks => {
-  console.log('DONE!!!!!');
-  console.log('feedbacks:', feedbacks);
+// globals:
+const linus = new LinusDialog(botTestData);
+const repliedMessages = [];
+// Handler factory that resolves to a fixed context on any message
+const fixedContextHandler = obj => ({
+  tokenizers: [{ id: 'globalTokenizer', tokenize: () => obj }],
 });
+const repliedMessagesHandler = {
+  events: {
+    stepDidReply: (feedback, context) => {
+      repliedMessages.push(feedback.payload);
+      return context;
+    },
+  },
+};
 
-// const cadidates = [
-//   {
-//     condition: () => {
-//       a.invalidMethod();
-//     },
-//   },
-// ];
-// linus.getCandidates();
+(async () => {
+  try {
+    const initialContext = {};
+    linus.use(fixedContextHandler({ intents: { hi: true } }));
+    console.log('resolving...');
+    const { feedbacks, context } = await linus.resolve('Hi', initialContext);
+    console.log('resolved...');
+    // expect(feedbacks[0]).toMatchObject({
+    //   type: 'REPLY',
+    //   payload: { type: 'text', content: 'Hi, how may I assist You ?' },
+    // });
+    //
+    // expect(context).toMatchObject({ env: { topicId: 'ROOT' } });
+    // console.log('Done!!!!');
+  } catch (e) {
+    console.log('Error', e);
+  }
+})();

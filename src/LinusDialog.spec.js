@@ -12,6 +12,7 @@ const repliedMessagesHandler = {
   events: {
     stepDidReply: (feedback, context) => {
       repliedMessages.push(feedback.payload);
+      return context;
     },
   },
 };
@@ -31,13 +32,16 @@ describe('LinusDialog integrated tests', () => {
     test('Should run a simple reply interaction', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { hi: true } }));
+      console.log('resolving...');
       const { feedbacks, context } = await linus.resolve('Hi', initialContext);
+      console.log('resolved...');
       expect(feedbacks[0]).toMatchObject({
         type: 'REPLY',
         payload: { type: 'text', content: 'Hi, how may I assist You ?' },
       });
 
       expect(context).toMatchObject({ env: { topicId: 'ROOT' } });
+      console.log('Done!!!!');
     });
   });
 });

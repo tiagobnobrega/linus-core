@@ -8,8 +8,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "npm run lint:js && npm run lint:pretty",
-    "lint:pretty":
-      "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
+    "lint:pretty": "npx prettier --single-quote --trailing-comma es5 --write ./src/*.js",
     "lint:js": "npx eslint --fix ./src/*.js",
     "build": "npm run build:split && npm run build:unified",
     "build:split": "webpack",
@@ -26,12 +25,18 @@
       "git add"
     ]
   },
-  "keywords": ["chatbot", "linus"],
+  "keywords": [
+    "chatbot",
+    "linus"
+  ],
   "author": "Tiago Nobrega",
   "license": "ISC",
   "jest": {
     "coverageDirectory": "./docs/coverage",
-    "coveragePathIgnorePatterns": ["/node_modules/", "/src/utils/test/"]
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/src/utils/test/"
+    ]
   },
   "devDependencies": {
     "add": "^2.0.6",

@@ -3,8 +3,8 @@ import LinusDialogBase, {
   InvalidCondition,
   MultipleInteractionsMatched,
   INTERNAL_ATTR as LINUS_INTERNAL_ATTR,
-  SAFE_ATTR as LINUS_SAFE_ATTR,
-} from './LinusDialogBase';
+  SAFE_ATTR as LINUS_SAFE_ATTR, InvalidTopicIdError
+} from "./LinusDialogBase";
 import botTestData from './utils/test/test-bot-data';
 
 import { validTokenizer, testTokenizer } from './utils/test/tokenizers';
@@ -189,7 +189,7 @@ describe('LinusDialogBase', () => {
       ];
       const messageTokenizers = await linus.runTokenizers(
         'test output',
-        tokenizers.map(t => t.tokenize)
+        tokenizers
       );
       expect(messageTokenizers.tokenizer1).toBe('test output');
       expect(messageTokenizers.tokenizer2).toBe('test output');
@@ -202,7 +202,7 @@ describe('LinusDialogBase', () => {
       ];
       const messageTokenizers = await linus.runTokenizers(
         'test output',
-        tokenizers.map(t => t.tokenize)
+        tokenizers
       );
       let timediff =
         messageTokenizers.tokenizer1_timestamp -
@@ -380,7 +380,6 @@ describe('LinusDialogBase', () => {
       expect(hopi.id).toBe('c3');
     });
 
-    // TODO: Slipt test into unit test and integration tests ????
     test('getTopicTargetInteraction should return highest priority interaction wich condition evalutaes to truthy and belongs to topic', () => {
       // look at testBotData to understand test
       const interaction = linus.getTopicTargetInteraction(
@@ -388,6 +387,13 @@ describe('LinusDialogBase', () => {
         {}
       );
       expect(interaction.id).toBe('target-interaction');
+    });
+
+    test('getTopicTargetInteraction should throw if passed topic does NOT have an id attribute', () => {
+      // look at testBotData to understand test
+      const callFn = () =>
+        linus.getTopicTargetInteraction({ tokenizers: ['rootTokenizer'] }, {});
+      expect(callFn).toThrow(InvalidTopicIdError);
     });
   });
 

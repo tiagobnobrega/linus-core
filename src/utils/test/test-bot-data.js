@@ -27,7 +27,6 @@ module.exports = {
     {
       id: 'LOCAL_TOKENIZER',
       botId: 'test-bot',
-      useGlobalTokenizers: true,
       tokenizers: [],
       ignoreTokens: null,
       onEnter: null,
