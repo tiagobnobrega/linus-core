@@ -1,8 +1,15 @@
 import _ from 'lodash';
 import EventEmitter from 'eventemitter3';
+import debugLib from 'debug';
 import requiredParam from './utils/requiredParam';
 import RTInterpreter from './utils/RTInterpreter';
 import extendError from './utils/extendError';
+
+const trace = debugLib('linus:LinusDialog:trace');
+const debug = debugLib('linus:LinusDialog:debug');
+const info = debugLib('linus:LinusDialog:info');
+const warn = debugLib('linus:LinusDialog:warn');
+const error = debugLib('linus:LinusDialog:error');
 
 export class RuntimeError extends extendError() {}
 export class InvalidCondition extends extendError(RuntimeError) {}
@@ -319,6 +326,10 @@ export default class LinusDialogBase extends EventEmitter {
    */
   getTargetInteraction = (interactions, context) => {
     const interactionCandidates = this.getCandidates(interactions, context);
+    trace(
+      'getTargetInteraction: found candidates:\n %O',
+      interactionCandidates.map(i => i.id)
+    );
     return this.getHighOrderPriorityInteraction(interactionCandidates);
   };
 
@@ -328,15 +339,25 @@ export default class LinusDialogBase extends EventEmitter {
    * @return {*}
    */
   getHighOrderPriorityInteraction = interactions => {
-    if (interactions.length === 1) return interactions[0];
+    if (interactions.length === 1) {
+      trace(`Single candidate elected:${interactions[0].id}`);
+      return interactions[0];
+    }
 
     const highestPriority = interactions.reduce((a, b) => {
       const bPriority = b.priority || 0;
       return a > bPriority ? a : bPriority;
     }, Number.MIN_SAFE_INTEGER);
-
+    trace(
+      `getHighOrderPriorityInteraction: highestPriority found: ${highestPriority}`
+    );
     const highestInteractions = interactions.filter(
-      i => i.priority === highestPriority
+      i => (i.priority || 0) === highestPriority
+    );
+
+    trace(
+      `getHighOrderPriorityInteraction: highestInteractions:\n %O`,
+      highestInteractions.map(i => i.id)
     );
 
     if (highestInteractions.length > 1) {
@@ -363,6 +384,10 @@ export default class LinusDialogBase extends EventEmitter {
         `Invalid topic id from topic: "${JSON.stringify(topic)}"`
       );
     const topicInteractions = this.getTopicInteractions(topic.id);
+    trace(
+      `getTopicTargetInteraction: found topic Interactions:\n %O`,
+      topicInteractions.map(i => i.id)
+    );
     return this.getTargetInteraction(topicInteractions, context);
   };
 
@@ -377,6 +402,7 @@ export default class LinusDialogBase extends EventEmitter {
     context
   ) => {
     const actions = this.getCandidates(interaction.actions, context);
+    trace('runInteraction: found action candidates:%O',actions);
     let feedbacks = [];
     let nextContext = context;
     for (let i = 0, size = actions.length; i < size; i += 1) {
@@ -534,10 +560,15 @@ export default class LinusDialogBase extends EventEmitter {
         )}\nContext:\n${JSON.stringify(enrichedContext)}`
       );
     }
+    trace('resolve: targetInteraction:%o', targetInteraction);
     const {
       feedbacks: interactionFeedbacks,
       context: nextContext,
     } = await this.runInteraction(targetInteraction, enrichedContext);
+    trace('resolve: runInteraction result: %O', {
+      interactionFeedbacks,
+      nextContext,
+    });
     return { feedbacks: interactionFeedbacks, context: nextContext };
   };
 }

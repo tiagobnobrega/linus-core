@@ -1,3 +1,4 @@
+import debug from 'debug';
 import LinusDialog from './LinusDialog';
 import botTestData from './utils/test/test-bot-data';
 
@@ -16,6 +17,14 @@ const repliedMessagesHandler = {
     },
   },
 };
+// Setup & shutdown
+beforeAll(() => {
+  debug.enable('linus:LinusDialog:trace');
+});
+
+afterAll(() => {
+  debug.disable('linus:LinusDialog:trace');
+});
 
 // Before each test set new fresh instance
 beforeEach(() => {

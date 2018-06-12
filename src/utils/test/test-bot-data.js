@@ -48,7 +48,7 @@ module.exports = {
       id: 'i1',
       condition: 'c=> true',
       priority: -99,
-      actons: [],
+      actions: [],
     },
     {
       botId: 'test-bot',
@@ -56,7 +56,7 @@ module.exports = {
       id: 'i2',
       condition: 'c=> false',
       priority: 99,
-      actons: [],
+      actions: [],
     },
     {
       botId: 'test-bot',
@@ -64,7 +64,7 @@ module.exports = {
       id: 'target-interaction',
       condition: 'c=> true',
       priority: 0,
-      actons: [],
+      actions: [],
     },
     {
       botId: 'test-bot',
@@ -72,7 +72,7 @@ module.exports = {
       id: 'fallback',
       condition: 'c=> true',
       priority: -99,
-      actons: [
+      actions: [
         {
           steps: [
             {
@@ -93,7 +93,7 @@ module.exports = {
       topicId: 'ROOT',
       id: 'hi',
       condition: 'c=> !!c.intents.hi',
-      actons: [
+      actions: [
         {
           steps: [
             {
@@ -114,7 +114,7 @@ module.exports = {
       topicId: 'ROOT',
       id: 'hiFunction',
       condition: 'c=> !!c.intents.hiFunction',
-      actons: [
+      actions: [
         {
           steps: [
             {
@@ -132,7 +132,7 @@ module.exports = {
       topicId: 'ROOT',
       id: 'movie_suggestion',
       condition: 'c=> !!c.intents.movieSuggestion',
-      actons: [
+      actions: [
         {
           steps: [
             {
@@ -151,7 +151,7 @@ module.exports = {
       topicId: 'MOVIE_SUGGESTION',
       id: 'incomplete_data',
       condition: 'c=> !c.entities.movie_genre || !c.entities.movie_quality',
-      actons: [
+      actions: [
         {
           condition: 'c=> !c.entities.movie_genre && !c.entities.movie_quality',
           steps: [
@@ -206,7 +206,7 @@ module.exports = {
       topicId: 'MOVIE_SUGGESTION',
       id: 'complete_data',
       condition: 'c=> c.entities.movie_genre && c.entities.movie_quality',
-      actons: [
+      actions: [
         {
           condition:
             'c=> c.entities.movie_genre[0] ==="horror" && c.entities.movie_quality[0]==="good"',

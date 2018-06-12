@@ -3,8 +3,9 @@ import LinusDialogBase, {
   InvalidCondition,
   MultipleInteractionsMatched,
   INTERNAL_ATTR as LINUS_INTERNAL_ATTR,
-  SAFE_ATTR as LINUS_SAFE_ATTR, InvalidTopicIdError
-} from "./LinusDialogBase";
+  SAFE_ATTR as LINUS_SAFE_ATTR,
+  InvalidTopicIdError,
+} from './LinusDialogBase';
 import botTestData from './utils/test/test-bot-data';
 
 import { validTokenizer, testTokenizer } from './utils/test/tokenizers';
@@ -328,6 +329,26 @@ describe('LinusDialogBase', () => {
         makeCandidate('c4', -1),
       ]);
       expect(hopi.id).toBe('c3');
+    });
+
+    test('getHighOrderPriorityInteraction should consider priority as "zero" (0) if no priority is defined in interaction', () => {
+      const makeCandidate = (id, priority) => ({
+        id,
+        priority,
+      });
+
+      let hopi = linus.getHighOrderPriorityInteraction([
+        makeCandidate('c1', null),
+        makeCandidate('c2', -5),
+      ]);
+      expect(hopi.id).toBe('c1');
+
+      hopi = linus.getHighOrderPriorityInteraction([
+        makeCandidate('c1', null),
+        makeCandidate('c2', 10),
+      ]);
+
+      expect(hopi.id).toBe('c2');
     });
 
     test('getHighOrderPriorityInteraction should throw if 2 interactions have highest priority', () => {
