@@ -402,7 +402,7 @@ export default class LinusDialogBase extends EventEmitter {
     context
   ) => {
     const actions = this.getCandidates(interaction.actions, context);
-    trace('runInteraction: found action candidates:%O',actions);
+    trace('runInteraction: found action candidates:%O', actions);
     let feedbacks = [];
     let nextContext = context;
     for (let i = 0, size = actions.length; i < size; i += 1) {
@@ -441,6 +441,7 @@ export default class LinusDialogBase extends EventEmitter {
         nextFeedbacks[0]
       );
       const stepFeedbacks = _.castArray(stepFeedback);
+      //TODO HANDLE FEEDBACKS MIGHT RETURN ADITIONAL FEEDBACKS IF STEP TYPE IS SET_TOPIC WITH "RESOLVE NEXT"; THIS MUST BE ADDED TO FEEDBACKS CHAIN
       nextContext = this.handleFeedbacks(stepFeedbacks, context);
       nextFeedbacks = [...stepFeedbacks, ...nextFeedbacks];
       this.emit('stepDidRun', {
@@ -476,10 +477,12 @@ export default class LinusDialogBase extends EventEmitter {
    */
   handleFeedbacks = (feedbacks = [], context) => {
     let nextContext = context;
-    feedbacks.forEach(feedback => {
+    feedbacks.every(feedback => {
+      let shouldRunNextStep = true;
+      const prevContext = _.cloneDeep(nextContext);
+      this.emit('stepWillRun',feedback,prevContext);
       const feedbackHandler =
         feedback.type && this.feedbackHandlers[feedback.type];
-      const prevContext = _.cloneDeep(nextContext);
       if (feedbackHandler) {
         if (feedbackHandler.updateContext) {
           const feedbackChangedContext = feedbackHandler.updateContext(
@@ -494,7 +497,12 @@ export default class LinusDialogBase extends EventEmitter {
           prevContext,
           nextContext
         );
+        //TODO @@@@@@@@@@@@@@ O RESOLVE VAI RETORNAR OS FEEDBACKS E O CONTEXTO, ISSO TEM QUE SER RETORNADO NESTA FUNÇÃO, VAI MUDAR ALGUMAS COISAS
+        if(hasToBreak){
+          shouldRunNextStep = false
+        }
       }
+      return shouldRunNextStep;
     });
     return nextContext;
   };
@@ -541,14 +549,18 @@ export default class LinusDialogBase extends EventEmitter {
   };
 
   resolve = async (message, ctx) => {
-    // get topic from context
+    // get topic from context if not present set default topic
+    let context = ctx;
+    const topicId = context[INTERNAL_ATTR] && context[INTERNAL_ATTR].topicId;
+    if (!topicId) {
+      context = this.setTopic(context, this.src.bot.rootTopic);
+    }
     const topic = this.getTopic(
-      (ctx[INTERNAL_ATTR] && ctx[INTERNAL_ATTR].topicId) ||
-        this.src.bot.rootTopic
+      context[INTERNAL_ATTR] && context[INTERNAL_ATTR].topicId
     );
     const topicTokenizers = this.getTopicTokenizers(topic);
     const messageTokens = await this.runTokenizers(message, topicTokenizers);
-    const enrichedContext = this.enrichContext(ctx, messageTokens);
+    const enrichedContext = this.enrichContext(context, messageTokens);
     const targetInteraction = this.getTopicTargetInteraction(
       topic,
       enrichedContext

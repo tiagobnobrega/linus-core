@@ -12,7 +12,7 @@ const fixedContextHandler = obj => ({
 const repliedMessagesHandler = {
   events: {
     stepDidReply: (feedback, context) => {
-      repliedMessages.push(feedback.payload);
+      repliedMessages.push(feedback.payload.content);
       return context;
     },
   },
@@ -41,16 +41,50 @@ describe('LinusDialog integrated tests', () => {
     test('Should run a simple reply interaction', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { hi: true } }));
-      console.log('resolving...');
       const { feedbacks, context } = await linus.resolve('Hi', initialContext);
-      console.log('resolved...');
       expect(feedbacks[0]).toMatchObject({
         type: 'REPLY',
         payload: { type: 'text', content: 'Hi, how may I assist You ?' },
       });
 
-      expect(context).toMatchObject({ env: { topicId: 'ROOT' } });
-      console.log('Done!!!!');
+      expect(context).toMatchObject({
+        env: { topicId: 'ROOT' },
+        intents: { hi: true },
+      });
+      expect(repliedMessages).toContain('Hi, how may I assist You ?');
     });
+
+    test('Should run a simple function reply interaction', async () => {
+      const initialContext = {};
+      linus.use(fixedContextHandler({ intents: { hiFunction: true } }));
+      const { feedbacks, context } = await linus.resolve('Hi', initialContext);
+      expect(feedbacks[0]).toMatchObject({
+        type: 'REPLY',
+        payload: { content: 'Hi, how may I assist You ?', type: 'text' },
+      });
+
+      expect(context).toMatchObject({
+        env: { topicId: 'ROOT' },
+        intents: { hiFunction: true },
+      });
+      expect(repliedMessages).toContain('Hi, how may I assist You ?');
+    });
+
+    test('Should run a simple function reply interaction', async () => {
+      const initialContext = {};
+      linus.use(fixedContextHandler({ intents: { hiFunction: true } }));
+      const { feedbacks, context } = await linus.resolve('Hi', initialContext);
+      expect(feedbacks[0]).toMatchObject({
+        type: 'REPLY',
+        payload: { content: 'Hi, how may I assist You ?', type: 'text' },
+      });
+
+      expect(context).toMatchObject({
+        env: { topicId: 'ROOT' },
+        intents: { hiFunction: true },
+      });
+      expect(repliedMessages).toContain('Hi, how may I assist You ?');
+    });
+
   });
 });

@@ -137,9 +137,14 @@ module.exports = {
           steps: [
             {
               feedback: {
-                type: 'CHANGE_TOPIC',
-                topicId: 'MOVIE_SUGGESTION',
-                runTargetTopicInteractions: true,
+                type: 'SET_TOPIC',
+                payload: {
+                  topicId: 'MOVIE_SUGGESTION',
+                  runTargetTopicInteractions: true,
+                },
+                meta: {
+                  flowActions: ['BREAK', 'RESOLVE_AGAIN'],
+                },
               },
             },
           ],
