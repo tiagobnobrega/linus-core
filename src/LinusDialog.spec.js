@@ -19,11 +19,11 @@ const repliedMessagesHandler = {
 };
 // Setup & shutdown
 beforeAll(() => {
-  debug.enable('linus:LinusDialog:trace');
+  // debug.enable('linus:LinusDialog:trace');
 });
 
 afterAll(() => {
-  debug.disable('linus:LinusDialog:trace');
+  // debug.disable('linus:LinusDialog:trace');
 });
 
 // Before each test set new fresh instance
@@ -54,6 +54,7 @@ describe('LinusDialog integrated tests', () => {
       expect(repliedMessages).toContain('Hi, how may I assist You ?');
     });
 
+    return;
     test('Should run a simple function reply interaction', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { hiFunction: true } }));

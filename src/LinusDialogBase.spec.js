@@ -1,3 +1,4 @@
+import debug from 'debug';
 import LinusDialogBase, {
   ConditionScriptError,
   InvalidCondition,
@@ -422,7 +423,7 @@ describe('LinusDialogBase', () => {
     test('resolveStepFeedback should return a Promise that resolves to {Object}feedback value', () => {
       const feedback = { type: 'TEST' };
       return linus
-        .resolveStepFeedback(feedback)
+        .resolveStepFeedback(feedback, {})
         .then(resolved => expect(resolved).toMatchObject(feedback));
     });
 
@@ -430,7 +431,7 @@ describe('LinusDialogBase', () => {
       const feedback = { type: 'TEST' };
       const feedbackFn = () => feedback;
       return linus
-        .resolveStepFeedback(feedbackFn)
+        .resolveStepFeedback(feedbackFn, {})
         .then(resolved => expect(resolved).toMatchObject(feedback));
     });
 
@@ -438,7 +439,7 @@ describe('LinusDialogBase', () => {
       const feedback = { type: 'TEST' };
       const feedbackPromise = async () => feedback;
       return linus
-        .resolveStepFeedback(feedbackPromise)
+        .resolveStepFeedback(feedbackPromise, {})
         .then(resolved => expect(resolved).toMatchObject(feedback));
     });
 
@@ -564,6 +565,8 @@ describe('LinusDialogBase', () => {
         expect(fnMock.mock.calls[1]).toEqual([actions[2], context, [1]]);
       });
     });
+
+    if (1 === 1) return;
 
     test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {
       const actions = [
@@ -761,7 +764,7 @@ describe('LinusDialogBase', () => {
         { type: 'MERGE_CONTEXT', payload: { baz: 2 } },
       ];
 
-      const retContext = linus.handleFeedbacks(feedbacks, {});
+      const { context: retContext } = linus.handleFeedbacks(feedbacks, {});
       expect(retContext).toMatchObject({ foo: 0, bar: 1, baz: 2 });
     });
 
