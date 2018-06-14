@@ -54,7 +54,6 @@ describe('LinusDialog integrated tests', () => {
       expect(repliedMessages).toContain('Hi, how may I assist You ?');
     });
 
-    return;
     test('Should run a simple function reply interaction', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { hiFunction: true } }));
@@ -71,7 +70,7 @@ describe('LinusDialog integrated tests', () => {
       expect(repliedMessages).toContain('Hi, how may I assist You ?');
     });
 
-    test('Should run a simple function reply interaction', async () => {
+    test('Should recursivelly call resolve function', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { hiFunction: true } }));
       const { feedbacks, context } = await linus.resolve('Hi', initialContext);
@@ -88,4 +87,7 @@ describe('LinusDialog integrated tests', () => {
     });
 
   });
+
+
+
 });

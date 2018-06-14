@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import _ from 'lodash';
 import EventEmitter from 'eventemitter3';
 import debugLib from 'debug';
@@ -451,7 +452,8 @@ export default class LinusDialogBase extends EventEmitter {
         context: nextContext,
         feedbacks: stepFeedbacks,
         shouldRunNext,
-      } = this.handleFeedbacks(stepFeedbacks, context));
+        // eslint-disable-next-line no-await-in-loop
+      } = await this.handleFeedbacks(stepFeedbacks, context));
       trace(`runAction: \thandleFeedbacks return:%o`, {
         context: nextContext,
         feedbacks: stepFeedbacks,
@@ -494,30 +496,39 @@ export default class LinusDialogBase extends EventEmitter {
    * @param feedbacks
    * @param context
    */
-  handleFeedbacks = (feedbacks = [], context = requiredParam('context')) => {
+  handleFeedbacks = async (
+    feedbacks = [],
+    context = requiredParam('context')
+  ) => {
     let retContext = context;
-    let retFeedbacks = feedbacks;
+    let retFeedbacks = [];
     // const stepFeedbacks = feedbacks;
     let shouldRunNext = true;
-    feedbacks.every((feedback, i) => {
-      trace(`handleFeedbacks: loop feedback:${i}`);
+    for (let i = 0, size = feedbacks.length; i < size; i += 1) {
+      const feedback = feedbacks[i];
+      // trace(`handleFeedbacks: loop feedback:${i}`);
       let handlerFeedbacks = [];
       const prevContext = _.cloneDeep(retContext);
       // emit stepWillRun event
       this.emit('stepWillRun', feedback, prevContext);
+      const feedbackHandlerReturn = await this.runFeedbackHandler(
+        feedback,
+        prevContext,
+        retContext
+      );
       ({
         context: retContext,
         feedbacks: handlerFeedbacks,
         shouldRunNext,
-      } = this.runFeedbackHandler(feedback, prevContext, retContext));
-      trace(`handleFeedbacks: \trunFeedbackHandler return:%o`, {
-        context: retContext,
-        feedbacks: handlerFeedbacks,
-        shouldRunNext,
-      });
-      retFeedbacks = [...handlerFeedbacks, ...retFeedbacks];
-      return shouldRunNext;
-    });
+      } = feedbackHandlerReturn);
+      trace(
+        `handleFeedbacks: \trunFeedbackHandler return:%o`,
+        feedbackHandlerReturn
+      );
+      retFeedbacks = [...handlerFeedbacks, feedback, ...retFeedbacks];
+      if (!shouldRunNext) break;
+    }
+
     return {
       context: retContext,
       feedbacks: retFeedbacks,
@@ -525,7 +536,7 @@ export default class LinusDialogBase extends EventEmitter {
     };
   };
 
-  runFeedbackHandler = (
+  runFeedbackHandler = async (
     feedback,
     prevContext = requiredParam('prevContext'),
     context = requiredParam('context')
@@ -553,11 +564,17 @@ export default class LinusDialogBase extends EventEmitter {
         retContext
       );
     }
+    trace(`runFeedbackHandler: resolving meta attribute`);
+    const handleMetaReturn = await this.feedbackHandleMeta(
+      feedback,
+      retContext
+    );
     ({
       context: retContext,
       feedbacks: retFeedbacks,
       shouldRunNext,
-    } = this.feedbackHandleMeta(feedback, retContext));
+    } = handleMetaReturn);
+
     trace(`runFeedbackHandler: feedbackHandleMeta return:%o`, {
       context: retContext,
       feedbacks: retFeedbacks,
@@ -582,30 +599,35 @@ export default class LinusDialogBase extends EventEmitter {
     return retContext;
   };
 
-  feedbackHandleMeta = (
+  feedbackHandleMeta = async (
     feedback = requiredParam('feedback'),
     context = requiredParam('context')
   ) => {
-    trace('feedbackHandleMeta: handle feedback meta attr:%o', feedback);
+    trace(
+      'feedbackHandleMeta: handle feedback meta attr, feedback:%o',
+      feedback
+    );
     let shouldRunNext = true;
     let retFeedbacks = [];
     let retContext = context;
     const feedbackFlowActions =
       feedback && feedback.meta && feedback.meta.flowActions;
+
     if (feedbackFlowActions) {
       trace('feedbackHandleMeta: feedbackFlowActions:%o', feedbackFlowActions);
-      if (feedbackFlowActions.indexOf('BREAK')) shouldRunNext = false;
+      if (feedbackFlowActions.indexOf('BREAK') !== -1) shouldRunNext = false;
       // recursivelly call resolveContext if RESOLVE_AGAIN is set in flowActions;
-      if (feedbackFlowActions.indexOf('RESOLVE_AGAIN')) {
+      if (feedbackFlowActions.indexOf('RESOLVE_AGAIN') !== -1) {
         trace('!!!!!! feedbackHandleMeta: recursion call: calling resolve ');
-        ({ context: retContext, feedbacks: retFeedbacks } = this.resolveContext(
-          context
-        ));
+        const resolveReturn = await this.resolveContext(context);
+        ({ context: retContext, feedbacks: retFeedbacks } = resolveReturn);
         trace('!!!!!! feedbackHandleMeta: recursion call for resolve return:', {
           context: retContext,
           feedbacks: retFeedbacks,
         });
       }
+    } else {
+      trace('feedbackHandleMeta: feedbackFlowActions is falsy');
     }
     return { context: retContext, feedbacks: retFeedbacks, shouldRunNext };
   };

@@ -566,8 +566,6 @@ describe('LinusDialogBase', () => {
       });
     });
 
-    if (1 === 1) return;
-
     test('runInteraction should return all actions feedbacks in the inverse order of execution', () => {
       const actions = [
         {
@@ -755,6 +753,84 @@ describe('LinusDialogBase', () => {
         initialContext,
         initialContext
       );
+    });
+
+    test('feedback w/ flowActions BREAK should further steps execution', async () => {
+      const feedbacks = [
+        { type: 'REPLY', payload: '0' },
+        { type: 'REPLY', payload: '1', meta: { flowActions: ['BREAK'] } },
+        { type: 'REPLY', payload: '2' },
+      ];
+      const initialContext = {};
+      console.log('enabling trrace log');
+      debug.enable('linus:LinusDialog:trace');
+      const { feedbacks: retFeedbacks } = await linus.handleFeedbacks(
+        feedbacks,
+        initialContext
+      );
+      debug.disable('linus:LinusDialog:trace');
+      expect(retFeedbacks).toEqual([feedbacks[1], feedbacks[0]]);
+    });
+
+    test('feedback w/ flowActions RESOLVE_AGAIN should call resolveContext', async () => {
+      const feedbacks = [
+        { type: 'REPLY', payload: '1' },
+        {
+          type: 'REPLY',
+          payload: '2',
+          meta: { flowActions: ['BREAK', 'RESOLVE_AGAIN'] },
+        },
+        { type: 'REPLY', payload: '3' },
+      ];
+
+      const initialContext = {};
+      // mock resolveContext
+      const fnMock = jest.fn().mockName('mockResolveContext');
+      linus.resolveContext = context => {
+        fnMock();
+        return {
+          feedbacks: [],
+          context,
+        };
+      };
+      await linus.handleFeedbacks(feedbacks, initialContext);
+      expect(fnMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('feedback w/ flowActions RESOLVE_AGAIN should retrun all feedbacks including resolveContext returned ones', async () => {
+      const feedbacks = [
+        { type: 'REPLY', payload: '1' },
+        {
+          type: 'REPLY',
+          payload: '2',
+          meta: { flowActions: ['BREAK', 'RESOLVE_AGAIN'] },
+        },
+        { type: 'REPLY', payload: '3' },
+      ];
+      const recursiveFeedbacks = [
+        { type: 'REPLY', payload: 'recursive_2' },
+        { type: 'REPLY', payload: 'recursive_1' },
+      ];
+      const initialContext = {};
+      // mock resolveContext
+      const fnMock = jest.fn().mockName('mockResolveContext');
+      linus.resolveContext = context => {
+        fnMock();
+        return {
+          feedbacks: recursiveFeedbacks,
+          context,
+        };
+      };
+      const { feedbacks: retFeedbacks } = await linus.handleFeedbacks(
+        feedbacks,
+        initialContext
+      );
+      expect(fnMock).toHaveBeenCalledTimes(1);
+      expect(retFeedbacks).toEqual([
+        ...recursiveFeedbacks,
+        feedbacks[1],
+        feedbacks[0],
+      ]);
     });
 
     test('next feedback should receive updated context', () => {
