@@ -138,10 +138,7 @@ module.exports = {
             {
               feedback: {
                 type: 'SET_TOPIC',
-                payload: {
-                  topicId: 'MOVIE_SUGGESTION',
-                  runTargetTopicInteractions: true,
-                },
+                payload: 'MOVIE_SUGGESTION',
                 meta: {
                   flowActions: ['BREAK', 'RESOLVE_AGAIN'],
                 },
@@ -155,10 +152,12 @@ module.exports = {
       botId: 'test-bot',
       topicId: 'MOVIE_SUGGESTION',
       id: 'incomplete_data',
-      condition: 'c=> !c.entities.movie_genre || !c.entities.movie_quality',
+      condition:
+        'c=> !c.entities || (!c.entities.movie_genre || !c.entities.movie_quality)',
       actions: [
         {
-          condition: 'c=> !c.entities.movie_genre && !c.entities.movie_quality',
+          condition:
+            'c=> !c.entities || (!c.entities.movie_genre && !c.entities.movie_quality)',
           steps: [
             {
               feedback: {
@@ -173,7 +172,8 @@ module.exports = {
           ],
         },
         {
-          condition: 'c=> c.entities.movie_genre && !c.entities.movie_quality',
+          condition:
+            'c=> c.entities && c.entities.movie_genre && !c.entities.movie_quality',
           steps: [
             {
               feedback: {
@@ -189,7 +189,8 @@ module.exports = {
         },
 
         {
-          condition: 'c=> !c.entities.movie_genre && c.entities.movie_quality',
+          condition:
+            'c=> c.entities && !c.entities.movie_genre && c.entities.movie_quality',
           steps: [
             {
               feedback: {
@@ -210,7 +211,8 @@ module.exports = {
       botId: 'test-bot',
       topicId: 'MOVIE_SUGGESTION',
       id: 'complete_data',
-      condition: 'c=> c.entities.movie_genre && c.entities.movie_quality',
+      condition:
+        'c=> c.entities && c.entities.movie_genre && c.entities.movie_quality',
       actions: [
         {
           condition:

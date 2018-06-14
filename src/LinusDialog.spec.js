@@ -70,24 +70,22 @@ describe('LinusDialog integrated tests', () => {
       expect(repliedMessages).toContain('Hi, how may I assist You ?');
     });
 
-    test('Should recursivelly call resolve function', async () => {
+    test('Should handle set dialog w/ resolve again', async () => {
       const initialContext = {};
-      linus.use(fixedContextHandler({ intents: { hiFunction: true } }));
-      const { feedbacks, context } = await linus.resolve('Hi', initialContext);
-      expect(feedbacks[0]).toMatchObject({
-        type: 'REPLY',
-        payload: { content: 'Hi, how may I assist You ?', type: 'text' },
-      });
+      linus.use(fixedContextHandler({ intents: { movieSuggestion: [''] } }));
+      const { feedbacks, context } = await linus.resolve('Any', initialContext);
+      console.log(feedbacks);
+      // expect(feedbacks[0]).toMatchObject({
+      //   type: 'REPLY',
+      //   payload: { content: 'Hi, how may I assist You ?', type: 'text' },
+      // });
 
       expect(context).toMatchObject({
         env: { topicId: 'ROOT' },
-        intents: { hiFunction: true },
       });
-      expect(repliedMessages).toContain('Hi, how may I assist You ?');
+      expect(repliedMessages).toContain(
+        'What kind of movie would you like to watch? And should it be a good or a bad movie ?'
+      );
     });
-
   });
-
-
-
 });

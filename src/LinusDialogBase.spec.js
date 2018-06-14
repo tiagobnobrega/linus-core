@@ -762,13 +762,10 @@ describe('LinusDialogBase', () => {
         { type: 'REPLY', payload: '2' },
       ];
       const initialContext = {};
-      console.log('enabling trrace log');
-      debug.enable('linus:LinusDialog:trace');
       const { feedbacks: retFeedbacks } = await linus.handleFeedbacks(
         feedbacks,
         initialContext
       );
-      debug.disable('linus:LinusDialog:trace');
       expect(retFeedbacks).toEqual([feedbacks[1], feedbacks[0]]);
     });
 

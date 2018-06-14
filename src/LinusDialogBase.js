@@ -310,7 +310,7 @@ export default class LinusDialogBase extends EventEmitter {
         return condition(context);
       } catch (err) {
         const csErr = new ConditionScriptError(
-          'Error evaluating candidate condition function',
+          `Error evaluating candidate '${e.topicId}.${e.id}' condition function`,
           err
         );
         // csErr.stack =
