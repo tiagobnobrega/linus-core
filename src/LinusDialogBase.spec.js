@@ -830,14 +830,17 @@ describe('LinusDialogBase', () => {
       ]);
     });
 
-    test('next feedback should receive updated context', () => {
+    test('next feedback should receive updated context', async () => {
       const feedbacks = [
         { type: 'MERGE_CONTEXT', payload: { foo: 0 } },
         { type: 'MERGE_CONTEXT', payload: { bar: 1 } },
         { type: 'MERGE_CONTEXT', payload: { baz: 2 } },
       ];
 
-      const { context: retContext } = linus.handleFeedbacks(feedbacks, {});
+      const { context: retContext } = await linus.handleFeedbacks(
+        feedbacks,
+        {}
+      );
       expect(retContext).toMatchObject({ foo: 0, bar: 1, baz: 2 });
     });
 

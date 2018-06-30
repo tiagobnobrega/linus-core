@@ -73,15 +73,10 @@ describe('LinusDialog integrated tests', () => {
     test('Should handle set dialog w/ resolve again', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { movieSuggestion: [''] } }));
-      const { feedbacks, context } = await linus.resolve('Any', initialContext);
-      console.log(feedbacks);
-      // expect(feedbacks[0]).toMatchObject({
-      //   type: 'REPLY',
-      //   payload: { content: 'Hi, how may I assist You ?', type: 'text' },
-      // });
+      const { context } = await linus.resolve('Any', initialContext);
 
       expect(context).toMatchObject({
-        env: { topicId: 'ROOT' },
+        env: { topicId: 'MOVIE_SUGGESTION' },
       });
       expect(repliedMessages).toContain(
         'What kind of movie would you like to watch? And should it be a good or a bad movie ?'
