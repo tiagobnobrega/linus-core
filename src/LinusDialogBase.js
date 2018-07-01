@@ -128,7 +128,7 @@ export default class LinusDialogBase extends EventEmitter {
         } already registered & overwrite attribute false`
       );
     }
-    this.messageTokenizers[tokenizer.id] = tokenizer; // TODO: @@@@@@!!@!@!@!@!@@@@ AQUI DEVE REGISTRAR O OBJETO TOKENIZER INTEIRO, NÃO SÓ A FUNCAO TOKENIZE @@@@!@!@!@@@!@@!@!@!@@!@
+    this.messageTokenizers[tokenizer.id] = tokenizer;
   };
 
   /**
@@ -162,6 +162,7 @@ export default class LinusDialogBase extends EventEmitter {
   runTokenizers = async (message, tokenizers) => {
     const promises = tokenizers.map(tokenizer => {
       try {
+        // TODO: o tokenizer deveria receber os parametros do topico, ex.: min confidence for intents ??????????????????/
         return Promise.resolve(tokenizer.tokenize(message)); // TODO: place catch to identify tokenizer error
       } catch (err) {
         throw new InvalidTokenizerError(

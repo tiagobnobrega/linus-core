@@ -1,0 +1,79 @@
+{
+  "name": "WatsonTokenizerWorkspace",
+  "intents": [
+    {
+      "intent": "feed",
+      "examples": [
+        { "text": "must be fed" },
+        { "text": "need to feed" },
+        { "text": "need some food" },
+        { "text": "i need to feed" },
+        { "text": "needs food" },
+        { "text": "is hungry" },
+        { "text": "is starving" }
+      ],
+      "description": "to feed something"
+    },
+    {
+      "intent": "goodbye",
+      "examples": [
+        { "text": "bye bye" },
+        { "text": "bye" },
+        { "text": "goodbye" },
+        { "text": "see you later" },
+        { "text": "see ya" }
+      ],
+      "description": "Goodbyes"
+    },
+    {
+      "intent": "hello",
+      "examples": [
+        { "text": "hi" },
+        { "text": "knock knock" },
+        { "text": "hey there" },
+        { "text": "good afternoon" },
+        { "text": "hey" },
+        { "text": "good morning" },
+        { "text": "hello" }
+      ],
+      "description": "Hellos"
+    }
+  ],
+  "entities": [
+    {
+      "entity": "animals",
+      "values": [
+        {
+          "type": "synonyms",
+          "value": "cat",
+          "metadata": null,
+          "synonyms": ["kitty", "kitten", "pussy", "puss", "tiger"]
+        },
+        {
+          "type": "synonyms",
+          "value": "dog",
+          "metadata": null,
+          "synonyms": ["pup", "puppy", "pooch", "hound", "flea bag"]
+        }
+      ],
+      "metadata": null,
+      "description": null
+    }
+  ],
+  "language": "en",
+  "metadata": {
+    "api_version": { "major_version": "v1", "minor_version": "2017-05-26" }
+  },
+  "description": "Workspace created for testing watson tokenizer component",
+  "dialog_nodes": [],
+  "workspace_id": "d7928004-4f3c-4186-9783-bf6c99f4b3d4",
+  "counterexamples": [],
+  "system_settings": {
+    "disambiguation": {
+      "prompt": "Did you mean:",
+      "none_of_the_above_prompt": "None of the above"
+    },
+    "human_agent_assist": { "prompt": "Did you mean:" }
+  },
+  "learning_opt_out": false
+}
