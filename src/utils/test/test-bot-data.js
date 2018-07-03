@@ -15,6 +15,11 @@ module.exports = {
       tokenizers: ['rootGlobalTokenizer'],
       ignoreTokens: null,
       onEnter: null,
+      nlp: {
+        intentMinConfidence: 0.6,
+        entityMinConfidence:0.6,
+        mergeStrategy: ['intents', 'entities'],
+      },
     },
     {
       id: 'MOVIE_SUGGESTION',

@@ -1,6 +1,6 @@
 import AssistantV1 from 'watson-developer-cloud/assistant/v1';
 import debug from 'debug';
-import WatsonTokenizer, { LATEST_VERSION } from './WatsonTokenizer';
+import WatsonTokenizerBase, { LATEST_VERSION } from './WatsonTokenizerBase';
 
 // .env file must be located inside watson folder;
 require('dotenv').config();
@@ -63,7 +63,7 @@ const createTestWorkspaceIfNotExists = async () => {
 // Setup & shutdown
 beforeAll(async () => {
   watsonWksId = await createTestWorkspaceIfNotExists();
-  watsonTokenizer = WatsonTokenizer({
+  watsonTokenizer = new WatsonTokenizerBase({
     id: 'watsonTokenizer',
     username: watsonUser,
     password: watsonPwd,

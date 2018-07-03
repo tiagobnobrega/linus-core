@@ -3,6 +3,11 @@ import requiredParam from '../../utils/requiredParam';
 
 import { wait } from '../../utils/test/helpers';
 
+// nlp: {
+//   minConfidence: 0.6,
+//     mergeStrategy: ['intents', 'entities'],
+// },
+
 export const LATEST_VERSION = '2018-02-16';
 
 const WatsonTokenizer = ({
@@ -58,8 +63,9 @@ const WatsonTokenizer = ({
    */
   const normalizeResponse = aiResponse => ({ intents: [], entities: {} });
 
+
   me.id = id;
-  me.tokenize = async msg => {
+  me.tokenize = async (msg, topic) => {
     const aiResponse = await callService(msg);
     console.log('aiResponse:', aiResponse);
   };

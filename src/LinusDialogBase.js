@@ -157,24 +157,27 @@ export default class LinusDialogBase extends EventEmitter {
   /**
    * Run tokenizers chain in sequence and return message tokens
    * @param {String} message - Message to be tokenized
+   * @param {Object} topic - Message topic object
    * @param {[Object]} tokenizers - Tokenizers objects
    */
-  runTokenizers = async (message, tokenizers) => {
+  runTokenizers = async (message, tokenizers, topic) => {
     const promises = tokenizers.map(tokenizer => {
       try {
-        // TODO: o tokenizer deveria receber os parametros do topico, ex.: min confidence for intents ??????????????????/
-        return Promise.resolve(tokenizer.tokenize(message)); // TODO: place catch to identify tokenizer error
+        return Promise.resolve(tokenizer.tokenize(message, topic)); // TODO: place catch to identify tokenizer error
       } catch (err) {
         throw new InvalidTokenizerError(
           `error running tokenizer ${tokenizer.id}`,
           err
-        ); // TODO: Preciso saber qual tokeniser deu pau, o id do tokenizer tem que chegar aqui!!!!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        );
       }
     });
 
     // each value must be an object or it should be ignored
     // should reduce to a single object merging properties
     //                                values.reduce((a, b) => _.merge(a, b), {}) ///pode funcionar assim também
+    // This way every subsequent tokenizer will override previous tokenizer attributes, this could be a problem with
+    // the user registers 2 tokenizer that resolve the same attribute key, but it's probably a edge case. I think this
+    // is the expected behaviour, and the common case scenario.
     return Promise.all(promises).then(values => Object.assign(...values));
   };
 
@@ -687,7 +690,11 @@ export default class LinusDialogBase extends EventEmitter {
       context[INTERNAL_ATTR] && context[INTERNAL_ATTR].topicId
     );
     const topicTokenizers = this.getTopicTokenizers(topic);
-    const messageTokens = await this.runTokenizers(message, topicTokenizers);
+    const messageTokens = await this.runTokenizers(
+      message,
+      topicTokenizers,
+      topic
+    );
     const enrichedContext = this.enrichContext(context, messageTokens);
     return this.resolveContext(enrichedContext);
   };
