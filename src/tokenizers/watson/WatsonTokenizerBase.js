@@ -18,15 +18,25 @@ export default class WatsonTokenizerBase extends EventEmitter {
   }) {
     super();
 
-    this.assistant = new AssistantV1({
-      username,
-      password,
-      version,
-    });
+    this.setAssistant(
+      new AssistantV1({
+        username,
+        password,
+        version,
+      })
+    );
     this.id = id;
     this.workspaceId = workspaceId;
     this.nlp = nlp;
   }
+
+  /**
+   * Defines Watson assistant to use
+   * @param assistant
+   */
+  setAssistant = assistant => {
+    this.assistant = assistant;
+  };
 
   /**
    * Builds Watson service call payload
@@ -115,8 +125,8 @@ export default class WatsonTokenizerBase extends EventEmitter {
     );
     const normalEntities = srcEntites.reduce((acc, curr) => {
       const newAcc = { ...acc };
-      newAcc[curr] = newAcc[curr] || [];
-      newAcc[curr].push(curr.entity);
+      newAcc[curr.entity] = newAcc[curr.entity] || [];
+      newAcc[curr.entity].push(curr.value);
       return newAcc;
     }, {});
     const normalEntitiesEx = filteredEntities;
@@ -136,7 +146,7 @@ export default class WatsonTokenizerBase extends EventEmitter {
     };
   };
 
-  /**
+  /** FIXME: filterMergeStrategy deveria ser utilizado pelo linusDialog não pelo tokenizer
    * Returns new object containing only attributes defined in mergeStrategy
    * @param obj
    * @param mergeStrategy
