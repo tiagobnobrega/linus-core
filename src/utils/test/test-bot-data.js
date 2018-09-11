@@ -17,9 +17,10 @@ module.exports = {
       onEnter: null,
       nlp: {
         intentMinConfidence: 0.6,
-        entityMinConfidence:0.6,
+        entityMinConfidence: 0.6,
         mergeStrategy: ['intents', 'entities'],
       },
+      transformMessageTokens: [],
     },
     {
       id: 'MOVIE_SUGGESTION',

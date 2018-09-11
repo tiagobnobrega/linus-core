@@ -23,5 +23,3 @@ export const UppercaseTokenizer = ({
     wait(timeout).then(() => ({ [contextAttr]: msg.toUpperCase() }));
   },
 });
-
-export const foo = 'bar'; // TODO: REMOVER !!!!

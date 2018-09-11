@@ -3,6 +3,7 @@ import LinusDialogBase, {
   ConditionScriptError,
   InvalidCondition,
   MultipleInteractionsMatched,
+  InvalidTokenizerError,
   INTERNAL_ATTR as LINUS_INTERNAL_ATTR,
   SAFE_ATTR as LINUS_SAFE_ATTR,
   InvalidTopicIdError,
@@ -114,6 +115,27 @@ describe('LinusDialogBase', () => {
       expect(interpreted).toEqual(expect.any(Array));
       expect(interpreted.length).toBe(interactions.length);
     });
+
+    test("topic's transformMessageTokens should be interpreted if is String", () => {
+      const topics = linus.interpretTopicTransformMessageTokens([
+        {
+          id: 'ROOT',
+          transformMessageTokens: 'a=>a+"_out"',
+        },
+      ]);
+      expect(topics[0].transformMessageTokens).toEqual(expect.any(Function));
+      expect(topics[0].transformMessageTokens('in')).toBe('in_out');
+    });
+
+    test("topic's transformMessageTokens should remain untouched if NOT String", () => {
+      const topics = linus.interpretTopicTransformMessageTokens([
+        {
+          id: 'ROOT',
+          transformMessageTokens: ['a', 'b'],
+        },
+      ]);
+      expect(topics[0].transformMessageTokens).toEqual(['a', 'b']);
+    });
   });
 
   describe('LinusDialogBase: Tokenizer Operations', () => {
@@ -213,6 +235,22 @@ describe('LinusDialogBase', () => {
 
       expect(timediff).toBeLessThan(200);
     });
+
+    test('Should throw InvalidTokenizerError w/ tokenizer id if an error occurs running tokenizer', async () => {
+      const tokenizers = [
+        {
+          id: 'SpecTokenizer',
+          tokenize: () => String.undef.property,
+        },
+      ];
+      expect.assertions(2);
+      try {
+        await linus.runTokenizers('test output', tokenizers, {});
+      } catch (e) {
+        expect(e).toBeInstanceOf(InvalidTokenizerError);
+        expect(e.message).toMatch(/SpecTokenizer/);
+      }
+    });
   });
 
   describe('LinusDialogBase: Topic Operations', () => {
@@ -241,6 +279,49 @@ describe('LinusDialogBase', () => {
       const topic = linus.getTopic(topicId);
       const topicTokenizers = linus.getTopicTokenizers(topic);
       expect(topicTokenizers.length).toBe(1);
+    });
+
+    test("getTopicTransformedTokens should resolve if it's a function", async () => {
+      const transformed = await linus.getTopicTransformedTokens(
+        {
+          transformMessageTokens: ({ context, messageTokens }) => ({
+            ...messageTokens,
+            ...context,
+            b: 'B',
+          }),
+        },
+        { c: 'C' },
+        { a: 'A' }
+      );
+      expect(transformed).toMatchObject({ a: 'A', b: 'B', c: 'C' });
+    });
+
+    test("getTopicTransformedTokens should filter out elements if it's an Array", async () => {
+      const transformed = await linus.getTopicTransformedTokens(
+        {
+          transformMessageTokens: ['b1.b2', 'c1'],
+        },
+        {},
+        {
+          a: 'A',
+          b: { b1: 'B1', b2: 'B2' },
+          c: { c1: { c11: 'C11' }, c2: 'C2' },
+        }
+      );
+      expect(transformed).toMatchObject({
+        a: 'A',
+        b: { b1: 'B1' },
+        c: { c2: 'C2' },
+      });
+    });
+
+    test("getTopicTransformedTokens should return passed messageTokens if it's not an Array or Function", async () => {
+      const transformed = await linus.getTopicTransformedTokens(
+        { transformMessageTokens: 22 },
+        {},
+        { a: 'A' }
+      );
+      expect(transformed).toMatchObject({ a: 'A' });
     });
   });
 

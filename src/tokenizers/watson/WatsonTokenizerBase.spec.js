@@ -1,5 +1,7 @@
 // import AssistantV1 from 'watson-developer-cloud/assistant/v1';
 import WatsonTokenizerBase, { LATEST_VERSION } from './WatsonTokenizerBase';
+import requiredParam from '../../utils/requiredParam';
+import _omit from 'lodash/omit';
 
 // .env file must be located inside watson folder;
 require('dotenv').config();
@@ -40,21 +42,21 @@ const watsonMessage = {
   ],
   entities: [
     {
-      entity: 'intent_100',
+      entity: 'entity_100',
       location: [0, 10],
-      value: 'intent_100',
+      value: 'entity_100',
       confidence: 1,
     },
     {
-      entity: 'intent_100',
+      entity: 'entity_100',
       location: [12, 24],
-      value: 'intent_100_2',
+      value: 'entity_100_2',
       confidence: 1,
     },
     {
-      entity: 'intent_30',
+      entity: 'entity_30',
       location: [26, 35],
-      value: 'intent_30',
+      value: 'entity_30',
       confidence: 0.3,
     },
   ],
@@ -134,8 +136,8 @@ describe('WatsonTokenizerBase Tests', () => {
     const normalized = tokenizer.normalizeEntities(watsonMessage.entities, 0);
     expect(normalized).toMatchObject({
       entities: {
-        intent_100: ['intent_100', 'intent_100_2'],
-        intent_30: ['intent_30'],
+        entity_100: ['entity_100', 'entity_100_2'],
+        entity_30: ['entity_30'],
       },
       entitiesEx: watsonMessage.entities,
     });
@@ -148,46 +150,185 @@ describe('WatsonTokenizerBase Tests', () => {
     );
     expect(normalized).toMatchObject({
       entities: {
-        intent_100: ['intent_100', 'intent_100_2'],
+        entity_100: ['entity_100', 'entity_100_2'],
       },
       entitiesEx: [
         {
-          entity: 'intent_100',
+          entity: 'entity_100',
           location: [0, 10],
-          value: 'intent_100',
+          value: 'entity_100',
           confidence: 1,
         },
         {
-          entity: 'intent_100',
+          entity: 'entity_100',
           location: [12, 24],
-          value: 'intent_100_2',
+          value: 'entity_100_2',
+          confidence: 1,
+        },
+      ],
+    });
+
+    expect(normalized.entities).not.toHaveProperty('entity_30');
+    normalized.entitiesEx.forEach(e => {
+      expect(e.entity).not.toBe('entity_30');
+    });
+  });
+
+  test('normalizeResponse should transform watson response into linus entities & intents format', async () => {
+    const normalized = tokenizer.normalizeResponse(watsonMessage, {
+      ...defaultTokenizerArgs.nlp,
+      intentMinConfidence: 0,
+      entityMinConfidence: 0,
+    });
+    expect(normalized).toMatchObject({
+      intents: ['intent_90', 'intent_50', 'intent_30', 'intent_20'],
+      intentsEx: [
+        { intent: 'intent_90', confidence: expect.any(Number) },
+        { intent: 'intent_50', confidence: expect.any(Number) },
+        { intent: 'intent_30', confidence: expect.any(Number) },
+        { intent: 'intent_20', confidence: expect.any(Number) },
+      ],
+      entities: {
+        entity_100: ['entity_100', 'entity_100_2'],
+        entity_30: ['entity_30'],
+      },
+      entitiesEx: watsonMessage.entities,
+    });
+  });
+
+  test('normalizeResponse should filter out entities & intents with confidence below minimum', async () => {
+    const normalized = tokenizer.normalizeResponse(
+      watsonMessage,
+      defaultTokenizerArgs.nlp
+    );
+    expect(normalized).toMatchObject({
+      intents: ['intent_90'],
+      intentsEx: [{ intent: 'intent_90', confidence: expect.any(Number) }],
+      entities: {
+        entity_100: ['entity_100', 'entity_100_2'],
+      },
+      entitiesEx: [
+        {
+          entity: 'entity_100',
+          location: [0, 10],
+          value: 'entity_100',
+          confidence: 1,
+        },
+        {
+          entity: 'entity_100',
+          location: [12, 24],
+          value: 'entity_100_2',
           confidence: 1,
         },
       ],
     });
   });
 
-  test('normalizeResponse should transform watson response into linus entities & intents format', async () => {
-    expect('NOT implemented').toBe('implemented');
-  });
-
-  test('normalizeResponse should filter out entities & intents with confidence below minimum', async () => {
-    expect('NOT implemented').toBe('implemented');
-  });
-
   test('getTopicNlpParams should return topic nlp params from linus pre-defined attrs', async () => {
-    expect('NOT implemented').toBe('implemented');
+    const nlpParams = tokenizer.getTopicNlpParams(defaultTokenizerArgs); // defaultTokenizerArgs has topic nlp attrs
+    expect(nlpParams).toMatchObject({
+      intentMinConfidence: expect.any(Number),
+      entityMinConfidence: expect.any(Number),
+      mergeStrategy: expect.any(Array),
+    });
+  });
+
+  test('getTopicNlpParams should return default tokenizer nlp params containing linus pre-defined attrs', async () => {
+    const nlpParams = tokenizer.getTopicNlpParams();
+    expect(nlpParams).toMatchObject({
+      intentMinConfidence: expect.any(Number),
+      entityMinConfidence: expect.any(Number),
+      mergeStrategy: expect.any(Array),
+    });
   });
 
   test('filterMergeStrategyAttrs should return object containing only merge strategy defined attributes', async () => {
-    expect('NOT implemented').toBe('implemented');
-  });
+    const intents = ['IntentA'];
+    const entities = { foo: 'foo', bar: 'bar' };
+    const tokens = {
+      foo: 'foo',
+      intents,
+      entities,
+    };
 
-  test('filterMergeStrategyAttrs should return object containing only merge strategy defined attributes', async () => {
-    expect('NOT implemented').toBe('implemented');
+    let attrsToMerge = tokenizer.filterMergeStrategyAttrs(tokens, [
+      'entities',
+      'intents',
+    ]);
+    expect(attrsToMerge).toMatchObject({ intents, entities });
+
+    attrsToMerge = tokenizer.filterMergeStrategyAttrs(tokens, ['entities']);
+    expect(attrsToMerge).toMatchObject({ entities });
+
+    attrsToMerge = tokenizer.filterMergeStrategyAttrs(tokens, ['intents']);
+    expect(attrsToMerge).toMatchObject({ intents });
   });
 
   test('tokenize should return tokenized object using confidence and mergeStrategy from topic in linus format', async () => {
-    expect('NOT implemented').toBe('implemented');
+    const mock = jest.fn();
+    mock.mockReturnValue(watsonMessage);
+    const mockAssistant = {
+      message: (payload, cb) => {
+        cb(null, mock(payload));
+      },
+    };
+    const msg = 'test';
+    tokenizer.setAssistant(mockAssistant);
+    const tokens = await tokenizer.tokenize(msg, {
+      ...defaultTokenizerArgs.nlp,
+      intentMinConfidence: 0.6,
+      entityMinConfidence: 0.6,
+    });
+    expect(tokens).toMatchObject({});
+  });
+
+  test('tokenize should throw error if assistant message functions errors', async () => {
+    const mock = jest.fn();
+    mock.mockReturnValue(watsonMessage);
+    const mockAssistant = {
+      message: (payload, cb) => {
+        cb(new Error('Test Error'), mock(payload));
+      },
+    };
+    const msg = 'test';
+    tokenizer.setAssistant(mockAssistant);
+
+    expect.assertions(1);
+    try {
+      await tokenizer.tokenize(msg, {
+        ...defaultTokenizerArgs.nlp,
+        intentMinConfidence: 0.6,
+        entityMinConfidence: 0.6,
+      });
+    } catch (e) {
+      expect(e).toBeInstanceOf(Error);
+    }
+  });
+
+  describe('Default parameter branches', () => {
+    test('constructor', () => {
+      const buildIt = omitted => () =>
+        new WatsonTokenizerBase(_omit(defaultTokenizerArgs, omitted));
+      expect(buildIt(['id', 'version', 'nlp'])).not.toThrow();
+      expect(buildIt(['username'])).toThrow(/Required parameter/);
+      expect(buildIt(['password'])).toThrow(/Required parameter/);
+      expect(buildIt(['workspaceId'])).toThrow(/Required parameter/);
+    });
+
+    test('normalizeResponse', () => {
+      expect(() => tokenizer.normalizeResponse()).toThrow(/Required parameter/);
+    });
+
+    test('normalizeIntents', () => {
+      expect(() => tokenizer.normalizeIntents()).toThrow(/Required parameter/);
+    });
+
+    test('normalizeEntities', () => {
+      expect(() => tokenizer.normalizeEntities()).toThrow(/Required parameter/);
+    });
+
+    test('filterMergeStrategyAttrs', () => {
+      expect(() => tokenizer.filterMergeStrategyAttrs()).not.toThrow();
+    });
   });
 });

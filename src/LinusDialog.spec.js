@@ -54,6 +54,22 @@ describe('LinusDialog integrated tests', () => {
       expect(repliedMessages).toContain('Hi, how may I assist You ?');
     });
 
+    test('Should run a simple reply interaction with starting context', async () => {
+      const initialContext = { env: { topicId: 'ROOT' } };
+      linus.use(fixedContextHandler({ intents: { hi: true } }));
+      const { feedbacks, context } = await linus.resolve('Hi', initialContext);
+      expect(feedbacks[0]).toMatchObject({
+        type: 'REPLY',
+        payload: { type: 'text', content: 'Hi, how may I assist You ?' },
+      });
+
+      expect(context).toMatchObject({
+        env: { topicId: 'ROOT' },
+        intents: { hi: true },
+      });
+      expect(repliedMessages).toContain('Hi, how may I assist You ?');
+    });
+
     test('Should run a simple function reply interaction', async () => {
       const initialContext = {};
       linus.use(fixedContextHandler({ intents: { hiFunction: true } }));

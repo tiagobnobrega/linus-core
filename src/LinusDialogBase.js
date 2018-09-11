@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import _ from 'lodash';
+import _ from 'lodash'; // FIXME: import lodash functions instead
 import EventEmitter from 'eventemitter3';
 import debugLib from 'debug';
 import requiredParam from './utils/requiredParam';
@@ -9,7 +9,7 @@ import extendError from './utils/extendError';
 const trace = debugLib('linus:LinusDialog:trace');
 // const debug = debugLib('linus:LinusDialog:debug');
 // const info = debugLib('linus:LinusDialog:info');
-// const warn = debugLib('linus:LinusDialog:warn');
+const warn = debugLib('linus:LinusDialog:warn');
 // const error = debugLib('linus:LinusDialog:error');
 
 export class RuntimeError extends extendError() {}
@@ -41,7 +41,7 @@ export default class LinusDialogBase extends EventEmitter {
     // TODO: Should I care to not mutate passed interactions object ? (ie.:CloneDeep it, maybe immer)
     this.src = {
       bot,
-      topics: _.keyBy(topics, 'id'),
+      topics: _.keyBy(this.interpretTopicTransformMessageTokens(topics), 'id'),
       interactions: this.groupInteractionsByTopicId(
         this.interpretInteractionScritps(interactions)
       ),
@@ -74,6 +74,19 @@ export default class LinusDialogBase extends EventEmitter {
       ...i,
       condition: i.condition && this.interpreter.require(i.condition),
       actions: this.interpretActions(i.actions),
+    }));
+
+  /**
+   * Interpret string conditions for function & calls interpretActions on interaction actions
+   * @param topics
+   * @return {{transformMessageTokens: Array|*|{type, properties, additionalProperties}}[]}
+   */
+  interpretTopicTransformMessageTokens = (topics = []) =>
+    topics.map(t => ({
+      ...t,
+      transformMessageTokens: _.isString(t.transformMessageTokens)
+        ? this.interpreter.require(t.transformMessageTokens)
+        : t.transformMessageTokens,
     }));
 
   /**
@@ -148,8 +161,8 @@ export default class LinusDialogBase extends EventEmitter {
       if (_.isFunction(fn)) {
         this.on(name, fn);
       } else {
-        // TODO: should emit warning event maybe? Use debug lib instead?
-        console.warn(`event ${name} value is not a function`);
+        // TODO: should emit warning event maybe?
+        warn(`event ${name} value is not a function`);
       }
     });
   };
@@ -235,9 +248,28 @@ export default class LinusDialogBase extends EventEmitter {
   };
 
   /**
+   * Get transformed message tokens based on topic transformMessageTokens attribute.
+   * If transformMessageTokens is an Array, it filtersOut passed tokens attributes using lodash omit.
+   * If its a function, call it as f({context,messageTokens}) and return it's return value
+   * @param {Object} topic
+   * @param {Object} context
+   * @param {Object} messageTokens
+   */
+  getTopicTransformedTokens = async (topic, context, messageTokens = []) => {
+    if (_.isArray(topic.transformMessageTokens)) {
+      return _.omit(messageTokens, topic.transformMessageTokens);
+    } else if (_.isFunction(topic.transformMessageTokens)) {
+      return Promise.resolve(
+        topic.transformMessageTokens({ context, messageTokens })
+      );
+    }
+    return messageTokens;
+  };
+
+  /**
    * Set the current context as the passed tokens, keeping internal attributes untouched.
    * Safe attributes are replaced if explicitly set. It's expected for safe attributes to be an Object.
-   * @param context
+   * @param {Object} context
    * @param tokens
    * @return {Object}
    */
@@ -313,14 +345,12 @@ export default class LinusDialogBase extends EventEmitter {
       try {
         return condition(context);
       } catch (err) {
-        const csErr = new ConditionScriptError(
+        throw new ConditionScriptError(
           `Error evaluating candidate '${e.topicId}.${
             e.id
           }' condition function`,
           err
         );
-        // csErr.stack =
-        throw csErr;
       }
     });
 
@@ -575,6 +605,7 @@ export default class LinusDialogBase extends EventEmitter {
       feedback,
       retContext
     );
+    // TODO: this variable assignment might be confusing
     ({
       context: retContext,
       feedbacks: retFeedbacks,
@@ -624,10 +655,10 @@ export default class LinusDialogBase extends EventEmitter {
       if (feedbackFlowActions.indexOf('BREAK') !== -1) shouldRunNext = false;
       // recursivelly call resolveContext if RESOLVE_AGAIN is set in flowActions;
       if (feedbackFlowActions.indexOf('RESOLVE_AGAIN') !== -1) {
-        trace('!!!!!! feedbackHandleMeta: recursion call: calling resolve ');
+        trace('feedbackHandleMeta: recursion call: calling resolve ');
         const resolveReturn = await this.resolveContext(context);
         ({ context: retContext, feedbacks: retFeedbacks } = resolveReturn);
-        trace('!!!!!! feedbackHandleMeta: recursion call for resolve return:', {
+        trace('feedbackHandleMeta: recursion call for resolve return:', {
           context: retContext,
           feedbacks: retFeedbacks,
         });
@@ -695,7 +726,15 @@ export default class LinusDialogBase extends EventEmitter {
       topicTokenizers,
       topic
     );
-    const enrichedContext = this.enrichContext(context, messageTokens);
+    const transformedMessageTokens = await this.getTopicTransformedTokens(
+      topic,
+      context,
+      messageTokens
+    );
+    const enrichedContext = this.enrichContext(
+      context,
+      transformedMessageTokens
+    );
     return this.resolveContext(enrichedContext);
   };
 

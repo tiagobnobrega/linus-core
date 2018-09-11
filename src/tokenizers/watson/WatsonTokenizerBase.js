@@ -123,7 +123,7 @@ export default class WatsonTokenizerBase extends EventEmitter {
     const filteredEntities = srcEntites.filter(
       i => i.confidence >= minConfidence
     );
-    const normalEntities = srcEntites.reduce((acc, curr) => {
+    const normalEntities = filteredEntities.reduce((acc, curr) => {
       const newAcc = { ...acc };
       newAcc[curr.entity] = newAcc[curr.entity] || [];
       newAcc[curr.entity].push(curr.value);
@@ -141,12 +141,12 @@ export default class WatsonTokenizerBase extends EventEmitter {
   getTopicNlpParams = (topic = {}) => {
     const { nlp } = topic;
     return {
-      ...nlp,
       ...this.nlp,
+      ...nlp,
     };
   };
 
-  /** FIXME: filterMergeStrategy deveria ser utilizado pelo linusDialog não pelo tokenizer
+  /**
    * Returns new object containing only attributes defined in mergeStrategy
    * @param obj
    * @param mergeStrategy
